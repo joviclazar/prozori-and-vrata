@@ -21,7 +21,6 @@ describe('distance', () => {
   });
 
   it('ignores extra properties such as time', () => {
-    // Structural typing: anything with x and y is a Point, so stroke points can be passed directly.
     const a = { x: 0, y: 0, t: 0 };
     const b = { x: 0, y: 10, t: 999 };
     expect(distance(a, b)).toBe(10);

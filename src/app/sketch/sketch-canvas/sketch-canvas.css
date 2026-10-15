@@ -1,0 +1,24 @@
+:host {
+  display: block;
+  position: relative;
+  height: 100%;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  touch-action: none;
+}
+
+.toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font: 14px sans-serif;
+  color: #555;
+}

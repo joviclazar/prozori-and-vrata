@@ -58,7 +58,6 @@ describe('straightness', () => {
       { x: 10, y: 0 },
       { x: 10, y: 10 },
     ];
-    // chord = sqrt(200) ~ 14.14, path = 20
     expect(straightness(points)).toBeCloseTo(Math.SQRT2 / 2);
   });
 

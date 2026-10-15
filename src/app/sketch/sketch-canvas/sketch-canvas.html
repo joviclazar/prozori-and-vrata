@@ -1,0 +1,12 @@
+<canvas
+  #canvas
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+></canvas>
+
+<div class="toolbar">
+  <button type="button" (click)="clear()">Clear</button>
+  <span>{{ strokes().length }} strokes</span>
+</div>
