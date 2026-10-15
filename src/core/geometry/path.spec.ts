@@ -66,6 +66,10 @@ describe('straightness', () => {
     expect(straightness(square)).toBe(0);
   });
 
+  it('is 0 for an empty path', () => {
+    expect(straightness([])).toBe(0);
+  });
+
   it('is 0 for a single point (a dot is not a line)', () => {
     expect(straightness([{ x: 1, y: 1 }])).toBe(0);
   });
