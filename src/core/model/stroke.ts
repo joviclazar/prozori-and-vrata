@@ -5,7 +5,8 @@ export interface StrokePoint extends Point {
   readonly pressure?: number;
 }
 
-export type PointerType = 'mouse' | 'pen' | 'touch';
+export const POINTER_TYPES = ['mouse', 'pen', 'touch'] as const;
+export type PointerType = (typeof POINTER_TYPES)[number];
 
 export interface Stroke {
   readonly id: number;

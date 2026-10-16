@@ -136,4 +136,25 @@ describe('parseSketchFile', () => {
     const text = fileWithStroke({ points: [validPoint(), { ...validPoint(), x: 'oops' }] });
     expect(() => parseSketchFile(text)).toThrow(/strokes\[0\]\.points\[1\]\.x/);
   });
+
+  it('accepts unique ids that are not consecutive', () => {
+    const text = fileWith({
+      strokes: [
+        { ...validStroke(), id: 3 },
+        { ...validStroke(), id: 7 },
+      ],
+    });
+    expect(parseSketchFile(text).strokes.map((s) => s.id)).toEqual([3, 7]);
+  });
+
+  it('rejects two strokes with the same id and names both of them', () => {
+    const text = fileWith({
+      strokes: [
+        { ...validStroke(), id: 1 },
+        { ...validStroke(), id: 2 },
+        { ...validStroke(), id: 1 },
+      ],
+    });
+    expect(() => parseSketchFile(text)).toThrow(/strokes\[2\]\.id.*strokes\[0\]/);
+  });
 });
