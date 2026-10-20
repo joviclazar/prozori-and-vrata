@@ -21,7 +21,8 @@ export function serializeSketch(strokes: readonly Stroke[], canvas: CanvasSize):
   const file: SketchFile = {
     version: SKETCH_FILE_VERSION,
     strokes: strokes.map((stroke) => ({
-      ...stroke,
+      id: stroke.id,
+      pointerType: stroke.pointerType,
       points: stroke.points.map(roundPoint),
     })),
     canvas,
