@@ -8,5 +8,17 @@
 
 <div class="toolbar">
   <button type="button" (click)="clear()">Clear</button>
+  <button type="button" (click)="save()">Save</button>
+  <button type="button" (click)="fileInput.click()">Load</button>
+  <input
+    #fileInput
+    type="file"
+    accept=".json,application/json"
+    hidden
+    (change)="onFileSelected(fileInput)"
+  />
   <span>{{ strokes().length }} strokes</span>
+  @if (loadError(); as error) {
+    <span class="error">{{ error }}</span>
+  }
 </div>

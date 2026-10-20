@@ -8,8 +8,12 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { parseSketchFile, serializeSketch } from '../../../core/model/sketch-file';
 import { PointerType, Stroke, StrokePoint } from '../../../core/model/stroke';
+import { downloadTextFile, sketchFileName } from '../sketch-file-io';
 import { applyStrokeStyle, drawSegment, drawStroke } from '../stroke-renderer';
+
+const LOAD_TIME_GAP_MS = 1000;
 
 interface StrokeInProgress {
   readonly id: number;
@@ -28,6 +32,7 @@ interface StrokeInProgress {
 })
 export class SketchCanvas {
   protected readonly strokes = signal<readonly Stroke[]>([]);
+  protected readonly loadError = signal<string | null>(null);
 
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private ctx: CanvasRenderingContext2D | null = null;
@@ -38,6 +43,7 @@ export class SketchCanvas {
   private current: StrokeInProgress | null = null;
   private nextId = 1;
   private sketchStart: number | null = null;
+  private timeOffset = 0;
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -65,7 +71,7 @@ export class SketchCanvas {
     const canvas = this.canvasRef().nativeElement;
     canvas.setPointerCapture(e.pointerId);
 
-    this.sketchStart ??= e.timeStamp;
+    this.sketchStart ??= e.timeStamp - this.timeOffset;
 
     const canvasRect = canvas.getBoundingClientRect();
     const timeOrigin = this.sketchStart;
@@ -121,10 +127,35 @@ export class SketchCanvas {
   }
 
   protected clear(): void {
+    this.load([]);
+  }
+
+  protected save(): void {
+    const json = serializeSketch(this.strokes(), { width: this.cssWidth, height: this.cssHeight });
+    downloadTextFile(sketchFileName(new Date()), json, 'application/json');
+  }
+
+  protected async onFileSelected(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    try {
+      this.load(parseSketchFile(await file.text()).strokes);
+    } catch (error) {
+      this.loadError.set(`${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private load(strokes: readonly Stroke[]): void {
     this.current = null;
-    this.nextId = 1;
+    this.nextId = maxStrokeId(strokes) + 1;
     this.sketchStart = null;
-    this.strokes.set([]);
+    this.timeOffset = strokes.length > 0 ? lastPointTime(strokes) + LOAD_TIME_GAP_MS : 0;
+    this.loadError.set(null);
+    this.strokes.set(strokes);
   }
 
   private resize(): void {
@@ -167,6 +198,17 @@ function toStrokePoint(e: PointerEvent, canvasRect: DOMRect, timeOrigin: number)
     time: e.timeStamp - timeOrigin,
     ...(e.pointerType === 'pen' ? { pressure: e.pressure } : {}),
   };
+}
+
+function maxStrokeId(strokes: readonly Stroke[]): number {
+  return strokes.reduce((max, stroke) => Math.max(max, stroke.id), 0);
+}
+
+function lastPointTime(strokes: readonly Stroke[]): number {
+  return strokes.reduce(
+    (latest, stroke) => stroke.points.reduce((t, point) => Math.max(t, point.time), latest),
+    0,
+  );
 }
 
 function toPointerType(value: string): PointerType {
