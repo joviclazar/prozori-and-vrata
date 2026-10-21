@@ -23,6 +23,16 @@ canvas {
   color: #555;
 }
 
+.toolbar label {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.tolerance-slider {
+  width: 400px;
+}
+
 .error {
   color: #b00020;
 }

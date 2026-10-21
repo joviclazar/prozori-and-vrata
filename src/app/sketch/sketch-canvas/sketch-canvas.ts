@@ -8,10 +8,12 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { simplifyPath } from '../../../core/geometry/simplify-path';
 import { parseSketchFile, serializeSketch } from '../../../core/model/sketch-file';
+import { SEGMENTATION_TOLERANCE_PX } from '../../../core/recognition/segmentation/segmentation-config';
 import { PointerType, Stroke, StrokePoint } from '../../../core/model/stroke';
 import { downloadTextFile, sketchFileName } from '../sketch-file-io';
-import { applyStrokeStyle, drawSegment, drawStroke } from '../stroke-renderer';
+import { applyStrokeStyle, drawSegment, drawSimplifiedPath, drawStroke } from '../stroke-renderer';
 
 const LOAD_TIME_GAP_MS = 1000;
 
@@ -33,6 +35,8 @@ interface StrokeInProgress {
 export class SketchCanvas {
   protected readonly strokes = signal<readonly Stroke[]>([]);
   protected readonly loadError = signal<string | null>(null);
+  protected readonly showSegments = signal(false);
+  protected readonly tolerance = signal(SEGMENTATION_TOLERANCE_PX);
 
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private ctx: CanvasRenderingContext2D | null = null;
@@ -59,6 +63,8 @@ export class SketchCanvas {
 
     effect(() => {
       this.strokes();
+      this.showSegments();
+      this.tolerance();
       this.redraw();
     });
   }
@@ -187,6 +193,11 @@ export class SketchCanvas {
     }
     if (this.current) {
       drawStroke(ctx, this.current.points);
+    }
+    if (this.showSegments()) {
+      for (const stroke of this.strokes()) {
+        drawSimplifiedPath(ctx, simplifyPath(stroke.points, this.tolerance()));
+      }
     }
   }
 }

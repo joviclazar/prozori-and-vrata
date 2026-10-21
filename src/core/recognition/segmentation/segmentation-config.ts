@@ -1,0 +1,2 @@
+export const SEGMENTATION_TOLERANCE_PX = 30;
+export const MIN_STROKE_LENGTH_PX = 8;

@@ -18,6 +18,31 @@
     (change)="onFileSelected(fileInput)"
   />
   <span>{{ strokes().length }} strokes</span>
+  <label>
+    <input
+      #segmentsToggle
+      type="checkbox"
+      [checked]="showSegments()"
+      (change)="showSegments.set(segmentsToggle.checked)"
+    />
+    Segments
+  </label>
+  @if (showSegments()) {
+    <label>
+      Tolerance
+      <input
+        #toleranceSlider
+        type="range"
+        min="1"
+        class="tolerance-slider"
+        max="100"
+        step="0.5"
+        [value]="tolerance()"
+        (input)="tolerance.set(toleranceSlider.valueAsNumber)"
+      />
+      {{ tolerance() }} px
+    </label>
+  }
   @if (loadError(); as error) {
     <span class="error">{{ error }}</span>
   }
