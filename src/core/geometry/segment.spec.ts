@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distanceToSegment } from './segment';
+import { distanceToSegment, toSegments } from './segment';
 
 const a = { x: 0, y: 0 };
 const b = { x: 10, y: 0 };
@@ -37,5 +37,38 @@ describe('distanceToSegment', () => {
 
   it('treats a zero-length segment as a point', () => {
     expect(distanceToSegment({ x: 3, y: 4 }, a, a)).toBe(5);
+  });
+});
+
+describe('toSegments', () => {
+  const p0 = { x: 0, y: 0 };
+  const p1 = { x: 0, y: 100 };
+  const p2 = { x: 80, y: 100 };
+  const p3 = { x: 80, y: 0 };
+
+  it('returns no segments for an empty list', () => {
+    expect(toSegments([])).toEqual([]);
+  });
+
+  it('returns no segments for a single vertex', () => {
+    expect(toSegments([p0])).toEqual([]);
+  });
+
+  it('returns one segment for two vertices', () => {
+    expect(toSegments([p0, p1])).toEqual([{ start: p0, end: p1 }]);
+  });
+
+  it('connects consecutive vertices, so neighbouring segments share a vertex', () => {
+    expect(toSegments([p0, p1, p2, p3])).toEqual([
+      { start: p0, end: p1 },
+      { start: p1, end: p2 },
+      { start: p2, end: p3 },
+    ]);
+  });
+
+  it('uses the original vertex objects', () => {
+    const [segment] = toSegments([p0, p1]);
+    expect(segment.start).toBe(p0);
+    expect(segment.end).toBe(p1);
   });
 });
