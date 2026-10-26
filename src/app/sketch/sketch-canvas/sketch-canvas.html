@@ -27,7 +27,19 @@
     />
     Segments
   </label>
-  @if (showSegments()) {
+  <label>
+    <input
+      #structureToggle
+      type="checkbox"
+      [checked]="showStructure()"
+      (change)="showStructure.set(structureToggle.checked)"
+    />
+    Structure
+  </label>
+  @if (structure(); as s) {
+    <span>{{ s.lines.length }} lines, {{ s.annotations.length }} annotations</span>
+  }
+  @if (showSegments() || showStructure()) {
     <label>
       Tolerance
       <input

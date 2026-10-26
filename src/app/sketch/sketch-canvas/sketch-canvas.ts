@@ -1,6 +1,7 @@
 import {
   afterNextRender,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
@@ -13,7 +14,16 @@ import { parseSketchFile, serializeSketch } from '../../../core/model/sketch-fil
 import { SEGMENTATION_TOLERANCE_PX } from '../../../core/recognition/segmentation/segmentation-config';
 import { PointerType, Stroke, StrokePoint } from '../../../core/model/stroke';
 import { downloadTextFile, sketchFileName } from '../sketch-file-io';
-import { applyStrokeStyle, drawSegment, drawSimplifiedPath, drawStroke } from '../stroke-renderer';
+import {
+  applyStrokeStyle,
+  drawAnnotation,
+  drawRejected,
+  drawSegment,
+  drawSimplifiedPath,
+  drawStroke,
+  drawStructuralLine,
+} from '../stroke-renderer';
+import { structureDebugView } from '../structure-debug';
 
 const LOAD_TIME_GAP_MS = 1000;
 
@@ -37,6 +47,10 @@ export class SketchCanvas {
   protected readonly loadError = signal<string | null>(null);
   protected readonly showSegments = signal(false);
   protected readonly tolerance = signal(SEGMENTATION_TOLERANCE_PX);
+  protected readonly showStructure = signal(false);
+  protected readonly structure = computed(() =>
+    this.showStructure() ? structureDebugView(this.strokes(), this.tolerance()) : null,
+  );
 
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private ctx: CanvasRenderingContext2D | null = null;
@@ -65,6 +79,7 @@ export class SketchCanvas {
       this.strokes();
       this.showSegments();
       this.tolerance();
+      this.structure();
       this.redraw();
     });
   }
@@ -193,6 +208,18 @@ export class SketchCanvas {
     }
     if (this.current) {
       drawStroke(ctx, this.current.points);
+    }
+    const structure = this.structure();
+    if (structure) {
+      for (const stroke of structure.annotations) {
+        drawAnnotation(ctx, stroke.points);
+      }
+      for (const points of structure.rejected) {
+        drawRejected(ctx, points);
+      }
+      for (const line of structure.lines) {
+        drawStructuralLine(ctx, line.segment);
+      }
     }
     if (this.showSegments()) {
       for (const stroke of this.strokes()) {

@@ -21,64 +21,31 @@ Poslednje ažuriranje: 2026-10-26.
 - Debug prikaz u canvas komponenti: checkbox "Segments" + slajder tolerancije (1–100 px), crta uprošćenu poliliniju crveno.
 - 90 testova prolazi, lint čist.
 
-## Sledeći korak: izdvajanje strukturnih linija (čeka potvrdu korisnika)
+## U toku: izdvajanje strukturnih linija
 
-### Problem u originalnom planu
+### Odluke (potvrđene 2026-10-26)
 
-`CLAUDE.md` (pipeline, korak 2) kaže "kratki potezi unutar rama su simboli, potezi van rama su cifre", ali u trenutku klasifikacije ram još ne postoji: nastaje tek u izgradnji mreže, i to od linija koje klasifikacija izdvoji. Kružna zavisnost.
+- Klasifikacija se deli na dva dela: sada samo strukturne linije (kandidati za ram i podele) i anotacije; anotacije se razvrstavaju po položaju tek posle izgradnje mreže (ram pre toga ne postoji, inače bi zavisnost bila kružna).
+- Klasifikuje se svaka duž, ne ceo potez (varijanta B).
+- Duž je strukturna ako je dužina ≥ 25% najduže duži u skici i odstupanje od 0°/90° ≤ 20°.
+- **Veto po oštrom uglu (opcija A):** potez sa temenom < 75° između dve duži, gde je kraća ≥ 25% duže, ide ceo u anotacije.
 
-### Predlog
+### Zašto veto (merenje na snimljenim skicama)
 
-Klasifikacija se deli na dva dela:
+Samo dužina i ugao davali su lažno pozitivne rezultate u 4 od 5 skica: `>`/`<` se crtaju pljosnato, a `Λ` usko, pa krakovi odstupaju od ose samo 9–20° i imaju do 59% najduže duži. Nijedan prag se ne može pooštriti: najkrivlja linija rama ima 9.2°, a najravniji krak simbola 9.3°; najkraća linija rama je na 45%, a najduži krak simbola na 59%.
 
-1. **Sada, bez konteksta:** izdvojiti strukturne linije (kandidati za ram i podele); sve ostalo su anotacije.
-2. **Posle izgradnje mreže:** anotacije se razvrstavaju po položaju (unutar polja = simbol, van rama = cifra).
+Ugao u temenu razdvaja jasno: ram 86–90°, simboli i cifre 22–66°. Uslov za "značajno" teme je prvo bio "obe duži ≥ 25% najduže u skici", ali krak od 24.5% (`13-26-11`, s7) je promakao. Odnos kraće i duže duži u istom potezu radi na svih 5 skica, a kukić (kratak u odnosu na svoju liniju) i dalje ne obara liniju rama.
 
-```
-segment -> extractStructuralLines -> buildGrid -> anotacije po položaju -> simboli / cifre -> ...
-```
-
-**Odluka 1 (preporuka B):** klasifikuje se svaka duž, ne ceo potez. Kukić na kraju linije je kratka duž koja se odbacuje; ram jednim potezom daje 4 strukturne duži; potez bez ijedne strukturne duži ide ceo (sa svim tačkama) u anotacije.
-
-**Odluka 2:** duž je strukturna ako važi oba uslova:
-
-- dužina ≥ **25% najduže duži u skici** (relativno; na snimljenim skicama prag ~130–150 px, cifre ≤ 90 px su ispod);
-- odstupanje od 0° ili 90° ≤ **20°** (krakovi `>`, `<`, `Λ` su na ~40–55°).
-
-Obe vrednosti idu u konfiguraciju (kao `segmentation-config.ts`).
-
-**Predloženi interfejs:**
-
-```ts
-type Orientation = 'horizontal' | 'vertical';
-
-interface StructuralLine {
-  readonly segment: Segment;
-  readonly orientation: Orientation;
-  readonly strokeId: number;
-}
-
-interface StructuralExtraction {
-  readonly lines: readonly StructuralLine[];
-  readonly annotations: readonly Stroke[];
-}
-
-function extractStructuralLines(
-  segmented: readonly SegmentedStroke[],
-  minRelativeLength: number,
-  maxAngleDeg: number,
-): StructuralExtraction
-```
-
-Pomoćne funkcije u `core/geometry`: `segmentLength(segment)` i `segmentOrientation(segment, maxAngleDeg): Orientation | null`.
+Poznato ograničenje: simbol nacrtan kao dva odvojena poteza nema teme; takve kandidate odbacuje tek `buildGrid`.
 
 ### Zadaci
 
-1. Korisnik potvrđuje odluke (podela klasifikacije, varijanta B, pragovi 25% i 20°).
-2. Ažurirati `CLAUDE.md` (pipeline, konstante): predlog Claude.
-3. `segmentLength`, `segmentOrientation`: testove Claude, implementacija korisnik.
-4. `extractStructuralLines`: testove Claude, implementacija korisnik.
-5. Debug prikaz (strukturne linije plavo, anotacije sivo, odbačene duži crveno): predlog Claude.
+1. ~~Odluke~~, ~~`CLAUDE.md`~~ (Claude).
+2. ~~Testovi~~ (Claude): `segmentLength`, `segmentOrientation`, `cornerAngle` u `core/geometry/segment.spec.ts`; `extractStructuralLines` u `core/recognition/stroke-classifier/extract-structural-lines.spec.ts`. Pragovi su u `structural-lines-config.ts`.
+3. ~~Implementacija~~: `core/geometry/segment.ts` (korisnik), `extract-structural-lines.ts` (Claude, na zahtev korisnika, uz objašnjenje).
+4. ~~Debug prikaz~~ (Claude): checkbox "Structure" (`app/sketch/structure-debug.ts`); strukturne linije plavo, anotacije sivo, odbačeno crveno (šum i duži strukturnih poteza koje nisu prošle, npr. kukić).
+
+Rezultat na snimljenim skicama: svih 5 tačno (4 ili 5 linija rama i podela, svi simboli i cifre u anotacijama, slučajni klik odbačen). 121 test u `core/` prolazi.
 
 ## Put do prvog demoa
 

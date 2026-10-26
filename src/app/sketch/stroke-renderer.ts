@@ -1,4 +1,5 @@
 import { Point } from '../../core/geometry/point';
+import { Segment } from '../../core/geometry/segment';
 
 const STROKE_COLOR = '#222';
 const STROKE_WIDTH = 2;
@@ -8,6 +9,13 @@ const SEGMENT_WIDTH = 1.5;
 const VERTEX_RADIUS = 3;
 const LABEL_FONT = '12px sans-serif';
 const LABEL_OFFSET = 6;
+
+const STRUCTURAL_COLOR = '#1565c0';
+const STRUCTURAL_WIDTH = 4;
+const ANNOTATION_COLOR = '#9e9e9e';
+const ANNOTATION_WIDTH = 3;
+const REJECTED_COLOR = '#d32f2f';
+const REJECTED_WIDTH = 3;
 
 export function applyStrokeStyle(ctx: CanvasRenderingContext2D): void {
   ctx.strokeStyle = STROKE_COLOR;
@@ -71,6 +79,36 @@ export function drawSimplifiedPath(
     vertices[0].x + LABEL_OFFSET,
     vertices[0].y - LABEL_OFFSET,
   );
+  ctx.restore();
+}
+
+export function drawStructuralLine(ctx: CanvasRenderingContext2D, segment: Segment): void {
+  drawColoredPath(ctx, [segment.start, segment.end], STRUCTURAL_COLOR, STRUCTURAL_WIDTH);
+}
+
+export function drawAnnotation(ctx: CanvasRenderingContext2D, points: readonly Point[]): void {
+  drawColoredPath(ctx, points, ANNOTATION_COLOR, ANNOTATION_WIDTH);
+}
+
+export function drawRejected(ctx: CanvasRenderingContext2D, points: readonly Point[]): void {
+  drawColoredPath(ctx, points, REJECTED_COLOR, REJECTED_WIDTH);
+}
+
+function drawColoredPath(
+  ctx: CanvasRenderingContext2D,
+  points: readonly Point[],
+  color: string,
+  width: number,
+): void {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = width;
+  if (points.length === 1) {
+    drawDot(ctx, points[0], width);
+  } else {
+    drawStroke(ctx, points);
+  }
   ctx.restore();
 }
 
