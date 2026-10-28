@@ -17,6 +17,7 @@ import { downloadTextFile, sketchFileName } from '../sketch-file-io';
 import {
   applyStrokeStyle,
   drawAnnotation,
+  drawAxisLine,
   drawRejected,
   drawSegment,
   drawSimplifiedPath,
@@ -48,8 +49,11 @@ export class SketchCanvas {
   protected readonly showSegments = signal(false);
   protected readonly tolerance = signal(SEGMENTATION_TOLERANCE_PX);
   protected readonly showStructure = signal(false);
+  protected readonly showAxisLines = signal(false);
   protected readonly structure = computed(() =>
-    this.showStructure() ? structureDebugView(this.strokes(), this.tolerance()) : null,
+    this.showStructure() || this.showAxisLines()
+      ? structureDebugView(this.strokes(), this.tolerance())
+      : null,
   );
 
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
@@ -210,7 +214,7 @@ export class SketchCanvas {
       drawStroke(ctx, this.current.points);
     }
     const structure = this.structure();
-    if (structure) {
+    if (structure && this.showStructure()) {
       for (const stroke of structure.annotations) {
         drawAnnotation(ctx, stroke.points);
       }
@@ -219,6 +223,11 @@ export class SketchCanvas {
       }
       for (const line of structure.lines) {
         drawStructuralLine(ctx, line.segment);
+      }
+    }
+    if (structure && this.showAxisLines()) {
+      for (const line of structure.axisLines) {
+        drawAxisLine(ctx, line);
       }
     }
     if (this.showSegments()) {

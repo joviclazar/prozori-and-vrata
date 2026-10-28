@@ -2,7 +2,7 @@
 
 Trenutno stanje projekta i sledeći koraci. Opis projekta, arhitektura i pravila rada su u `CLAUDE.md`; ovde je samo ono što se menja iz sesije u sesiju.
 
-Poslednje ažuriranje: 2026-10-26.
+Poslednje ažuriranje: 2026-10-28.
 
 ## Gotovo
 
@@ -21,31 +21,39 @@ Poslednje ažuriranje: 2026-10-26.
 - Debug prikaz u canvas komponenti: checkbox "Segments" + slajder tolerancije (1–100 px), crta uprošćenu poliliniju crveno.
 - 90 testova prolazi, lint čist.
 
-## U toku: izdvajanje strukturnih linija
+### Faza 2, korak 2: izdvajanje strukturnih linija (gotovo)
 
-### Odluke (potvrđene 2026-10-26)
+- `core/geometry/segment.ts`: `segmentLength`, `segmentOrientation`, `cornerAngle`, tip `Orientation`.
+- `core/recognition/stroke-classifier/extract-structural-lines.ts`: duž je strukturna ako je ≥ 25% najduže i ≤ 20° od ose; **veto**: potez sa temenom < 75° između dve duži uporedive dužine (kraća ≥ 25% duže) ide ceo u anotacije.
+- Zašto veto: bez njega krakovi simbola (`>`/`<` pljosnati, `Λ` uzak) prolaze kao linije u 4 od 5 skica, a pragovi dužine i ugla se preklapaju sa ramom. Ugao u temenu razdvaja jasno: ram 86–90°, simboli i cifre 22–66°. Detalji su u `CLAUDE.md` (pipeline, korak 2).
+- Debug prikaz: checkbox "Structure" (`app/sketch/structure-debug.ts`); linije plavo, anotacije sivo, odbačeno crveno.
+- Rezultat: svih 5 skica tačno; 121 test u `core/` prolazi.
 
-- Klasifikacija se deli na dva dela: sada samo strukturne linije (kandidati za ram i podele) i anotacije; anotacije se razvrstavaju po položaju tek posle izgradnje mreže (ram pre toga ne postoji, inače bi zavisnost bila kružna).
-- Klasifikuje se svaka duž, ne ceo potez (varijanta B).
-- Duž je strukturna ako je dužina ≥ 25% najduže duži u skici i odstupanje od 0°/90° ≤ 20°.
-- **Veto po oštrom uglu (opcija A):** potez sa temenom < 75° između dve duži, gde je kraća ≥ 25% duže, ide ceo u anotacije.
+## U toku: ispravljanje i spajanje linija (korak 2 ka Demo 1)
 
-### Zašto veto (merenje na snimljenim skicama)
+### Odluke (potvrđene 2026-10-27)
 
-Samo dužina i ugao davali su lažno pozitivne rezultate u 4 od 5 skica: `>`/`<` se crtaju pljosnato, a `Λ` usko, pa krakovi odstupaju od ose samo 9–20° i imaju do 59% najduže duži. Nijedan prag se ne može pooštriti: najkrivlja linija rama ima 9.2°, a najravniji krak simbola 9.3°; najkraća linija rama je na 45%, a najduži krak simbola na 59%.
+- **Ispravljanje:** `StructuralLine` -> `AxisLine { orientation, position, start, end, strokeIds }`. Položaj je prosek koordinata krajeva, raspon je projekcija krajeva (`start < end`). Fitovanje najmanjim kvadratima je odloženo (razlika je par piksela).
+- **Spajanje:** ista orijentacija, razlika položaja ≤ 10% i razmak raspona ≤ 10% najduže ulazne linije. Rezultat: unija raspona, položaj ponderisan dužinom, spojeni `strokeIds`.
+- **Algoritam:** ponavljati "nađi par, spoji" dok ima promena (O(n³), n ≈ 4–10).
 
-Ugao u temenu razdvaja jasno: ram 86–90°, simboli i cifre 22–66°. Uslov za "značajno" teme je prvo bio "obe duži ≥ 25% najduže u skici", ali krak od 24.5% (`13-26-11`, s7) je promakao. Odnos kraće i duže duži u istom potezu radi na svih 5 skica, a kukić (kratak u odnosu na svoju liniju) i dalje ne obara liniju rama.
+### Merenja na snimljenim skicama
 
-Poznato ograničenje: simbol nacrtan kao dva odvojena poteza nema teme; takve kandidate odbacuje tek `buildGrid`.
+- Kraj linije odstupa od početka 0–56 px, pa je ispravljanje potrebno.
+- Prvih 5 skica nema stranu iz više delova; to pokriva nova skica iz zadatka 5.
+- Najbliže paralelne linije (podela i strana) su ≥ ~240 px udaljene, a prag spajanja je 35–60 px.
+- Krajevi linija se ne dodiruju (razmaci i prebačaji 15–50 px), što je posao koraka 3.
 
 ### Zadaci
 
-1. ~~Odluke~~, ~~`CLAUDE.md`~~ (Claude).
-2. ~~Testovi~~ (Claude): `segmentLength`, `segmentOrientation`, `cornerAngle` u `core/geometry/segment.spec.ts`; `extractStructuralLines` u `core/recognition/stroke-classifier/extract-structural-lines.spec.ts`. Pragovi su u `structural-lines-config.ts`.
-3. ~~Implementacija~~: `core/geometry/segment.ts` (korisnik), `extract-structural-lines.ts` (Claude, na zahtev korisnika, uz objašnjenje).
-4. ~~Debug prikaz~~ (Claude): checkbox "Structure" (`app/sketch/structure-debug.ts`); strukturne linije plavo, anotacije sivo, odbačeno crveno (šum i duži strukturnih poteza koje nisu prošle, npr. kukić).
+1. ~~Odluke, `CLAUDE.md`~~ (Claude).
+2. ~~Config i testovi~~ (Claude): `core/recognition/grid-builder/grid-builder-config.ts`, `axis-lines.spec.ts`.
+3. ~~`toAxisLine`~~ (korisnik).
+4. ~~`mergeCollinear`~~: `canMerge` i `merge` korisnik, glavna funkcija i `findMergeablePair` Claude (na zahtev korisnika).
+5. ~~Nova skica~~ (korisnik): `sketch-2026-10-28-21-48-18.json`, leva strana iz dva poteza (s1+s2) i gornja precrtana dva puta (s5+s6). Obe su spojene: razlika položaja ≤ 3.5 px i razmak ≤ 1.7 px pri pragu od 26 px; najbliži par koji ne sme da se spoji (podela i strana) je 128 px udaljen. Skica je manja od prethodnih (ram ~260×170 px), pa potvrđuje i relativne pragove.
+6. ~~Debug prikaz~~ (Claude): checkbox "Axis lines", ispravljene linije zeleno; spojene linije imaju oznaku poteza (npr. `1+2`).
 
-Rezultat na snimljenim skicama: svih 5 tačno (4 ili 5 linija rama i podela, svi simboli i cifre u anotacijama, slučajni klik odbačen). 121 test u `core/` prolazi.
+Rezultat na snimljenim skicama: broj osnih linija jednak broju strukturnih (4 ili 5), nijedno lažno spajanje. 137 testova u `core/` prolazi.
 
 ## Put do prvog demoa
 
@@ -55,7 +63,7 @@ Rezultat na snimljenim skicama: svih 5 tačno (4 ili 5 linija rama i podela, svi
 | # | Korak | Obim |
 |---|---|---|
 | **Demo 1** |||
-| 1 | Izdvajanje strukturnih linija (gore) | mali |
+| 1 | ~~Izdvajanje strukturnih linija~~ | mali |
 | 2 | Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži | srednji |
 | 3 | Mreža: pronalaženje spoljnog rama i podela | najveći |
 | 4 | Mreža: ram + podele -> polja | srednji |

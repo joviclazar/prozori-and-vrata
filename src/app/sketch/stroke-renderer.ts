@@ -1,5 +1,6 @@
 import { Point } from '../../core/geometry/point';
 import { Segment } from '../../core/geometry/segment';
+import { AxisLine } from '../../core/recognition/grid-builder/axis-lines';
 
 const STROKE_COLOR = '#222';
 const STROKE_WIDTH = 2;
@@ -16,6 +17,8 @@ const ANNOTATION_COLOR = '#9e9e9e';
 const ANNOTATION_WIDTH = 3;
 const REJECTED_COLOR = '#d32f2f';
 const REJECTED_WIDTH = 3;
+const AXIS_COLOR = '#2e7d32';
+const AXIS_WIDTH = 3;
 
 export function applyStrokeStyle(ctx: CanvasRenderingContext2D): void {
   ctx.strokeStyle = STROKE_COLOR;
@@ -92,6 +95,27 @@ export function drawAnnotation(ctx: CanvasRenderingContext2D, points: readonly P
 
 export function drawRejected(ctx: CanvasRenderingContext2D, points: readonly Point[]): void {
   drawColoredPath(ctx, points, REJECTED_COLOR, REJECTED_WIDTH);
+}
+
+export function drawAxisLine(ctx: CanvasRenderingContext2D, line: AxisLine): void {
+  const from =
+    line.orientation === 'horizontal'
+      ? { x: line.start, y: line.position }
+      : { x: line.position, y: line.start };
+  const to =
+    line.orientation === 'horizontal'
+      ? { x: line.end, y: line.position }
+      : { x: line.position, y: line.end };
+
+  drawColoredPath(ctx, [from, to], AXIS_COLOR, AXIS_WIDTH);
+
+  if (line.strokeIds.length > 1) {
+    ctx.save();
+    ctx.fillStyle = AXIS_COLOR;
+    ctx.font = LABEL_FONT;
+    ctx.fillText(line.strokeIds.join('+'), from.x + LABEL_OFFSET, from.y - LABEL_OFFSET);
+    ctx.restore();
+  }
 }
 
 function drawColoredPath(

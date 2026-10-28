@@ -36,10 +36,24 @@
     />
     Structure
   </label>
+  <label>
+    <input
+      #axisLinesToggle
+      type="checkbox"
+      [checked]="showAxisLines()"
+      (change)="showAxisLines.set(axisLinesToggle.checked)"
+    />
+    Axis lines
+  </label>
   @if (structure(); as s) {
-    <span>{{ s.lines.length }} lines, {{ s.annotations.length }} annotations</span>
+    @if (showStructure()) {
+      <span>{{ s.lines.length }} lines, {{ s.annotations.length }} annotations</span>
+    }
+    @if (showAxisLines()) {
+      <span>{{ s.axisLines.length }} axis lines</span>
+    }
   }
-  @if (showSegments() || showStructure()) {
+  @if (showSegments() || showStructure() || showAxisLines()) {
     <label>
       Tolerance
       <input
