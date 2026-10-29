@@ -18,7 +18,10 @@ import {
   applyStrokeStyle,
   drawAnnotation,
   drawAxisLine,
+  drawDivider,
+  drawFrame,
   drawRejected,
+  drawRejectedAxisLine,
   drawSegment,
   drawSimplifiedPath,
   drawStroke,
@@ -50,8 +53,9 @@ export class SketchCanvas {
   protected readonly tolerance = signal(SEGMENTATION_TOLERANCE_PX);
   protected readonly showStructure = signal(false);
   protected readonly showAxisLines = signal(false);
+  protected readonly showGrid = signal(false);
   protected readonly structure = computed(() =>
-    this.showStructure() || this.showAxisLines()
+    this.showStructure() || this.showAxisLines() || this.showGrid()
       ? structureDebugView(this.strokes(), this.tolerance())
       : null,
   );
@@ -228,6 +232,15 @@ export class SketchCanvas {
     if (structure && this.showAxisLines()) {
       for (const line of structure.axisLines) {
         drawAxisLine(ctx, line);
+      }
+    }
+    if (structure?.grid && this.showGrid()) {
+      drawFrame(ctx, structure.grid.frame);
+      for (const line of structure.grid.dividers) {
+        drawDivider(ctx, line);
+      }
+      for (const line of structure.grid.rejected) {
+        drawRejectedAxisLine(ctx, line);
       }
     }
     if (this.showSegments()) {

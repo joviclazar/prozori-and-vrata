@@ -45,6 +45,15 @@
     />
     Axis lines
   </label>
+  <label>
+    <input
+      #gridToggle
+      type="checkbox"
+      [checked]="showGrid()"
+      (change)="showGrid.set(gridToggle.checked)"
+    />
+    Grid
+  </label>
   @if (structure(); as s) {
     @if (showStructure()) {
       <span>{{ s.lines.length }} lines, {{ s.annotations.length }} annotations</span>
@@ -52,8 +61,15 @@
     @if (showAxisLines()) {
       <span>{{ s.axisLines.length }} axis lines</span>
     }
+    @if (showGrid()) {
+      @if (s.grid; as grid) {
+        <span>{{ grid.dividers.length }} dividers, {{ grid.rejected.length }} rejected</span>
+      } @else {
+        <span>no frame</span>
+      }
+    }
   }
-  @if (showSegments() || showStructure() || showAxisLines()) {
+  @if (showSegments() || showStructure() || showAxisLines() || showGrid()) {
     <label>
       Tolerance
       <input

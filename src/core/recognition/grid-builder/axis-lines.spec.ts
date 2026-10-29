@@ -7,6 +7,8 @@ import { MergeThresholds } from './grid-builder-config';
 const THRESHOLDS: MergeThresholds = {
   maxPositionDiffRatio: 0.1,
   maxGapRatio: 0.1,
+  minDoubleSpacingRatio: 0.02,
+  minDoubleOverlapRatio: 0.5,
 };
 
 function structural(
@@ -26,8 +28,9 @@ function axis(
   start: number,
   end: number,
   strokeIds: readonly number[] = [1],
+  doubled = false,
 ): AxisLine {
-  return { orientation, position, start, end, strokeIds };
+  return { orientation, position, start, end, strokeIds, doubled };
 }
 
 const anchor = axis('vertical', 0, 0, 400, [99]);
@@ -178,5 +181,82 @@ describe('mergeCollinear', () => {
     mergeCollinear(input, THRESHOLDS);
 
     expect(input).toEqual(copy);
+  });
+});
+
+describe('mergeCollinear with double lines', () => {
+  it('marks a line that was not merged as single', () => {
+    const [result] = mergeCollinear([anchor], THRESHOLDS);
+    expect(result.doubled).toBe(false);
+  });
+
+  it('marks two lines side by side, drawn apart on purpose, as doubled', () => {
+    const first = axis('vertical', 696, 222, 444, [5]);
+    const second = axis('vertical', 711, 222, 444, [6]);
+    const frameSide = axis('horizontal', 222, 528, 909, [4]);
+    const [merged] = mergeCollinear([frameSide, first, second], THRESHOLDS).filter(
+      (l) => l.orientation === 'vertical',
+    );
+
+    expect(merged.doubled).toBe(true);
+    expect(merged.position).toBeCloseTo(703.5);
+    expect([...merged.strokeIds].sort()).toEqual([5, 6]);
+  });
+
+  it('does not mark a line traced twice in the same place as doubled', () => {
+    const first = axis('horizontal', 100, 0, 300, [1]);
+    const second = axis('horizontal', 102, 10, 290, [2]);
+    const [merged] = horizontals(mergeCollinear([anchor, first, second], THRESHOLDS));
+
+    expect(merged.doubled).toBe(false);
+  });
+
+  it('accepts a spacing exactly at the limit and rejects a smaller one', () => {
+    const line = axis('horizontal', 100, 0, 300, [1]);
+    const atLimit = axis('horizontal', 108, 0, 300, [2]);
+    const below = axis('horizontal', 107, 0, 300, [3]);
+
+    expect(horizontals(mergeCollinear([anchor, line, atLimit], THRESHOLDS))[0].doubled).toBe(true);
+    expect(horizontals(mergeCollinear([anchor, line, below], THRESHOLDS))[0].doubled).toBe(false);
+  });
+
+  it('does not mark a side drawn in two parts as doubled, because the parts follow each other', () => {
+    const left = axis('horizontal', 100, 0, 200, [1]);
+    const right = axis('horizontal', 110, 230, 430, [2]);
+    const [merged] = horizontals(mergeCollinear([anchor, left, right], THRESHOLDS));
+
+    expect(merged.doubled).toBe(false);
+  });
+
+  it('measures the overlap relative to the shorter line', () => {
+    const line = axis('horizontal', 100, 0, 200, [1]);
+    const halfOverlapping = axis('horizontal', 115, 100, 300, [2]);
+    const lessOverlapping = axis('horizontal', 115, 101, 301, [3]);
+
+    expect(
+      horizontals(mergeCollinear([anchor, line, halfOverlapping], THRESHOLDS))[0].doubled,
+    ).toBe(true);
+    expect(
+      horizontals(mergeCollinear([anchor, line, lessOverlapping], THRESHOLDS))[0].doubled,
+    ).toBe(false);
+  });
+
+  it('keeps a double line doubled when one of its lines was drawn in two parts', () => {
+    const whole = axis('horizontal', 100, 0, 400, [1]);
+    const firstHalf = axis('horizontal', 115, 0, 200, [2]);
+    const secondHalf = axis('horizontal', 115, 210, 400, [3]);
+
+    for (const input of [
+      [anchor, whole, firstHalf, secondHalf],
+      [anchor, firstHalf, secondHalf, whole],
+    ]) {
+      const merged = horizontals(mergeCollinear(input, THRESHOLDS));
+      expect(merged).toHaveLength(1);
+      expect(merged[0].doubled).toBe(true);
+    }
+  });
+
+  it('keeps toAxisLine lines single', () => {
+    expect(toAxisLine(structural('vertical', 300, 100, 300, 400)).doubled).toBe(false);
   });
 });

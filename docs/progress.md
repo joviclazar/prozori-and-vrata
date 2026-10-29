@@ -2,7 +2,7 @@
 
 Trenutno stanje projekta i sledeći koraci. Opis projekta, arhitektura i pravila rada su u `CLAUDE.md`; ovde je samo ono što se menja iz sesije u sesiju.
 
-Poslednje ažuriranje: 2026-10-28.
+Poslednje ažuriranje: 2026-10-29.
 
 ## Gotovo
 
@@ -29,31 +29,44 @@ Poslednje ažuriranje: 2026-10-28.
 - Debug prikaz: checkbox "Structure" (`app/sketch/structure-debug.ts`); linije plavo, anotacije sivo, odbačeno crveno.
 - Rezultat: svih 5 skica tačno; 121 test u `core/` prolazi.
 
-## U toku: ispravljanje i spajanje linija (korak 2 ka Demo 1)
+### Faza 2, korak 3: ispravljanje i spajanje linija (gotovo)
 
-### Odluke (potvrđene 2026-10-27)
+- `core/recognition/grid-builder/axis-lines.ts`: `toAxisLine` (položaj = prosek krajeva, raspon `start < end`), `mergeCollinear` (ista orijentacija, razlika položaja i razmak ≤ 10% najduže linije; unija raspona, položaj ponderisan dužinom; "nađi par, spoji" dok ima promena).
+- Debug prikaz: checkbox "Axis lines" (zeleno; spojene linije imaju oznaku poteza, npr. `1+2`).
+- Skica `21-48-18` (strana iz dva poteza, strana precrtana dva puta): oba spajanja tačna, razlika ≤ 3.5 px pri pragu od 26 px; najbliži par koji ne sme da se spoji je 128 px udaljen.
 
-- **Ispravljanje:** `StructuralLine` -> `AxisLine { orientation, position, start, end, strokeIds }`. Položaj je prosek koordinata krajeva, raspon je projekcija krajeva (`start < end`). Fitovanje najmanjim kvadratima je odloženo (razlika je par piksela).
-- **Spajanje:** ista orijentacija, razlika položaja ≤ 10% i razmak raspona ≤ 10% najduže ulazne linije. Rezultat: unija raspona, položaj ponderisan dužinom, spojeni `strokeIds`.
-- **Algoritam:** ponavljati "nađi par, spoji" dok ima promena (O(n³), n ≈ 4–10).
+## U toku: ram i podele (korak 3 ka Demo 1)
+
+### Odluke (potvrđene 2026-10-28)
+
+- **Ram:** krajnje linije po orijentaciji; pravougaonik (`BoundingBox`) samo od njihovih položaja, krajevi se ne gledaju (otvoreni uglovi prolaze). Svaka strana pokriva ≥ 50% svoje dimenzije rama (samo deo unutar rama). Bez 2 + 2 linije nema rama (`null`).
+- **Podele:** svaki kraj unutrašnje linije udara u granicu (strana rama ili prihvaćena podela suprotne orijentacije koja se pruža preko tog mesta) na ≤ 15% dimenzije rama u pravcu linije; krajevi se lepe za najbližu granicu; "nađi liniju, prihvati" dok ima promena (T-spojevi). Ostalo je odbačeno.
 
 ### Merenja na snimljenim skicama
 
-- Kraj linije odstupa od početka 0–56 px, pa je ispravljanje potrebno.
-- Prvih 5 skica nema stranu iz više delova; to pokriva nova skica iz zadatka 5.
-- Najbliže paralelne linije (podela i strana) su ≥ ~240 px udaljene, a prag spajanja je 35–60 px.
-- Krajevi linija se ne dodiruju (razmaci i prebačaji 15–50 px), što je posao koraka 3.
+- Promašaji na uglovima rama: 1–8% dimenzije, osim `13-26-11`: gornji desni ugao otvoren 26% (gornja strana se završava 130 px pre desne). Pristup koji traži zatvoren pravougaonik bi tu pao.
+- Najlošija pokrivenost strane: 70% (`13-26-11`, gornja).
+- Krajevi podela: ≤ 4% od rama. Sve podele su vertikalne, od vrha do dna, na 47–50% širine; T-spoj i prečka nisu snimljeni.
 
 ### Zadaci
 
 1. ~~Odluke, `CLAUDE.md`~~ (Claude).
-2. ~~Config i testovi~~ (Claude): `core/recognition/grid-builder/grid-builder-config.ts`, `axis-lines.spec.ts`.
-3. ~~`toAxisLine`~~ (korisnik).
-4. ~~`mergeCollinear`~~: `canMerge` i `merge` korisnik, glavna funkcija i `findMergeablePair` Claude (na zahtev korisnika).
-5. ~~Nova skica~~ (korisnik): `sketch-2026-10-28-21-48-18.json`, leva strana iz dva poteza (s1+s2) i gornja precrtana dva puta (s5+s6). Obe su spojene: razlika položaja ≤ 3.5 px i razmak ≤ 1.7 px pri pragu od 26 px; najbliži par koji ne sme da se spoji (podela i strana) je 128 px udaljen. Skica je manja od prethodnih (ram ~260×170 px), pa potvrđuje i relativne pragove.
-6. ~~Debug prikaz~~ (Claude): checkbox "Axis lines", ispravljene linije zeleno; spojene linije imaju oznaku poteza (npr. `1+2`).
+2. ~~Config i testovi~~ (Claude): `GRID_THRESHOLDS` u `grid-builder-config.ts`, `find-grid-lines.spec.ts`.
+3. ~~`findFrame`~~ (korisnik; proveru pokrivenosti dopisao Claude na zahtev korisnika).
+4. ~~`findDividers` i `findGridLines`~~ (Claude, na zahtev korisnika).
+5. Nove skice: prozor sa nadsvetlom (prečka + podela ispod nje), podela koja namerno ne dodiruje ram (korisnik).
+6. ~~Debug prikaz~~ (Claude): checkbox "Grid"; ram kao ljubičasti pravougaonik, zalepljene podele (dupla linija kao dve crte), odbačene linije crveno; u toolbar-u broj podela i odbačenih ili "no frame".
 
-Rezultat na snimljenim skicama: broj osnih linija jednak broju strukturnih (4 ili 5), nijedno lažno spajanje. 137 testova u `core/` prolazi.
+Rezultat: svih 7 skica daju tačan ram i podele, nijedna linija odbačena. 164 testa u `core/` prolazi.
+
+### Otkriveno: dupla linija (T-profil)
+
+Korisnik je potvrdio konvenciju (upisano u `CLAUDE.md`): jednostruka linija = štulp, dupla = T-profil; horizontalna podela se uvek crta duplo. Skica `10-29-21-19-15`: dupla vertikalna linija (s5 i s6) na razmaku **15 px** (3.9% najduže linije), a `mergeCollinear` ih spaja u jednu (prag 10%), pa se informacija o duploj liniji gubi. Za poređenje: strana precrtana dva puta (`21-48-18`) ima razmak 0.5 px (0.2%). 
+Rešenje (potvrđeno): `AxisLine.doubled`; spajanje ostaje (dupla linija je jedna podela, položaj na osi T-profila), a spojena linija je `doubled` ako delovi stoje jedan pored drugog (preklapanje ≥ 50% kraćeg) na razmaku ≥ 2% najduže linije, ili je neki deo već bio `doubled`. Ram se uvek crta jednostrukom linijom.
+
+1. ~~Polje `doubled` na svim mestima, pragovi u `MERGE_THRESHOLDS`, testovi~~ (Claude). `merge` za sada samo prenosi `a.doubled || b.doubled`.
+2. ~~Uslov "jedan pored drugog" u `merge`~~ (Claude, na zahtev korisnika). Na svih 7 skica `doubled` je samo T-profil iz `10-29-21-19-15`; precrtana strana i strana iz dva poteza (`21-48-18`) nisu označene. 173 testa prolazi.
+3. Još 2–3 skice sa duplom linijom i nadsvetlo (korisnik).
 
 ## Put do prvog demoa
 
@@ -64,7 +77,7 @@ Rezultat na snimljenim skicama: broj osnih linija jednak broju strukturnih (4 il
 |---|---|---|
 | **Demo 1** |||
 | 1 | ~~Izdvajanje strukturnih linija~~ | mali |
-| 2 | Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži | srednji |
+| 2 | ~~Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži~~ | srednji |
 | 3 | Mreža: pronalaženje spoljnog rama i podela | najveći |
 | 4 | Mreža: ram + podele -> polja | srednji |
 | 5 | Orkestracija (`sketch-parser.ts`), poziv posle svakog poteza | mali |

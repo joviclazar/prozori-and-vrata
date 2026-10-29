@@ -1,4 +1,5 @@
 import { Point } from '../../core/geometry/point';
+import { BoundingBox } from '../../core/geometry/bounding-box';
 import { Segment } from '../../core/geometry/segment';
 import { AxisLine } from '../../core/recognition/grid-builder/axis-lines';
 
@@ -19,6 +20,9 @@ const REJECTED_COLOR = '#d32f2f';
 const REJECTED_WIDTH = 3;
 const AXIS_COLOR = '#2e7d32';
 const AXIS_WIDTH = 3;
+const GRID_COLOR = '#6a1b9a';
+const GRID_WIDTH = 3;
+const DOUBLE_LINE_OFFSET = 4;
 
 export function applyStrokeStyle(ctx: CanvasRenderingContext2D): void {
   ctx.strokeStyle = STROKE_COLOR;
@@ -98,14 +102,7 @@ export function drawRejected(ctx: CanvasRenderingContext2D, points: readonly Poi
 }
 
 export function drawAxisLine(ctx: CanvasRenderingContext2D, line: AxisLine): void {
-  const from =
-    line.orientation === 'horizontal'
-      ? { x: line.start, y: line.position }
-      : { x: line.position, y: line.start };
-  const to =
-    line.orientation === 'horizontal'
-      ? { x: line.end, y: line.position }
-      : { x: line.position, y: line.end };
+  const [from, to] = axisLineEnds(line, line.position);
 
   drawColoredPath(ctx, [from, to], AXIS_COLOR, AXIS_WIDTH);
 
@@ -116,6 +113,40 @@ export function drawAxisLine(ctx: CanvasRenderingContext2D, line: AxisLine): voi
     ctx.fillText(line.strokeIds.join('+'), from.x + LABEL_OFFSET, from.y - LABEL_OFFSET);
     ctx.restore();
   }
+}
+
+export function drawFrame(ctx: CanvasRenderingContext2D, frame: BoundingBox): void {
+  const corners = [
+    { x: frame.minX, y: frame.minY },
+    { x: frame.maxX, y: frame.minY },
+    { x: frame.maxX, y: frame.maxY },
+    { x: frame.minX, y: frame.maxY },
+    { x: frame.minX, y: frame.minY },
+  ];
+  drawColoredPath(ctx, corners, GRID_COLOR, GRID_WIDTH);
+}
+
+export function drawDivider(ctx: CanvasRenderingContext2D, line: AxisLine): void {
+  const offsets = line.doubled ? [-DOUBLE_LINE_OFFSET, DOUBLE_LINE_OFFSET] : [0];
+  for (const offset of offsets) {
+    drawColoredPath(ctx, axisLineEnds(line, line.position + offset), GRID_COLOR, GRID_WIDTH);
+  }
+}
+
+export function drawRejectedAxisLine(ctx: CanvasRenderingContext2D, line: AxisLine): void {
+  drawRejected(ctx, axisLineEnds(line, line.position));
+}
+
+function axisLineEnds(line: AxisLine, position: number): [Point, Point] {
+  return line.orientation === 'horizontal'
+    ? [
+        { x: line.start, y: position },
+        { x: line.end, y: position },
+      ]
+    : [
+        { x: position, y: line.start },
+        { x: position, y: line.end },
+      ];
 }
 
 function drawColoredPath(

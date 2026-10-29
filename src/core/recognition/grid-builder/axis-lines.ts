@@ -8,6 +8,7 @@ export interface AxisLine {
   readonly start: number;
   readonly end: number;
   readonly strokeIds: readonly number[];
+  readonly doubled: boolean;
 }
 
 export function toAxisLine(line: StructuralLine): AxisLine {
@@ -19,6 +20,7 @@ export function toAxisLine(line: StructuralLine): AxisLine {
       start: Math.min(line.segment.start.x, line.segment.end.x),
       end: Math.max(line.segment.start.x, line.segment.end.x),
       strokeIds: [line.strokeId],
+      doubled: false,
     };
     return result;
   } else {
@@ -28,6 +30,7 @@ export function toAxisLine(line: StructuralLine): AxisLine {
       start: Math.min(line.segment.start.y, line.segment.end.y),
       end: Math.max(line.segment.start.y, line.segment.end.y),
       strokeIds: [line.strokeId],
+      doubled: false,
     };
     return result;
   }
@@ -45,15 +48,25 @@ function canMerge(a: AxisLine, b: AxisLine, maxPositionDiff: number, maxGap: num
   return gap <= maxGap;
 }
 
-function merge(a: AxisLine, b: AxisLine): AxisLine {
+function merge(
+  a: AxisLine,
+  b: AxisLine,
+  minDoubleSpacing: number,
+  minDoubleOverlapRatio: number,
+): AxisLine {
   const aLength: number = Math.abs(a.end - a.start);
   const bLength: number = Math.abs(b.end - b.start);
+  const overlap = Math.min(a.end, b.end) - Math.max(a.start, b.start);
+  const sideBySide =
+    overlap / Math.min(aLength, bLength) >= minDoubleOverlapRatio &&
+    Math.abs(a.position - b.position) >= minDoubleSpacing;
   return {
     orientation: a.orientation,
     start: Math.min(a.start, b.start),
     end: Math.max(a.end, b.end),
     position: (a.position * aLength + b.position * bLength) / (aLength + bLength),
     strokeIds: [...a.strokeIds, ...b.strokeIds],
+    doubled: a.doubled || b.doubled || sideBySide,
   };
 }
 
@@ -64,13 +77,14 @@ export function mergeCollinear(
   const longest = lines.reduce((max, line) => Math.max(max, line.end - line.start), 0);
   const maxPositionDiff = thresholds.maxPositionDiffRatio * longest;
   const maxGap = thresholds.maxGapRatio * longest;
+  const minDoubleSpacing = thresholds.minDoubleSpacingRatio * longest;
 
   let result: AxisLine[] = [...lines];
   let pair = findMergeablePair(result, maxPositionDiff, maxGap);
 
   while (pair !== null) {
     const [i, j] = pair;
-    const merged = merge(result[i], result[j]);
+    const merged = merge(result[i], result[j], minDoubleSpacing, thresholds.minDoubleOverlapRatio);
     result = [...result.filter((_, k) => k !== i && k !== j), merged];
     pair = findMergeablePair(result, maxPositionDiff, maxGap);
   }
