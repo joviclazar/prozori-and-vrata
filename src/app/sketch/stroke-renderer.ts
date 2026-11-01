@@ -23,6 +23,8 @@ const AXIS_WIDTH = 3;
 const GRID_COLOR = '#6a1b9a';
 const GRID_WIDTH = 3;
 const DOUBLE_LINE_OFFSET = 4;
+const BEAUTIFIED_COLOR = '#222';
+const BEAUTIFIED_WIDTH = 2.5;
 const CELL_COLORS = [
   'rgba(30, 136, 229, 0.18)',
   'rgba(67, 160, 71, 0.18)',
@@ -126,6 +128,27 @@ export function drawAxisLine(ctx: CanvasRenderingContext2D, line: AxisLine): voi
 }
 
 export function drawFrame(ctx: CanvasRenderingContext2D, frame: BoundingBox): void {
+  drawFrameWith(ctx, frame, GRID_COLOR, GRID_WIDTH);
+}
+
+export function drawDivider(ctx: CanvasRenderingContext2D, line: AxisLine): void {
+  drawDividerWith(ctx, line, GRID_COLOR, GRID_WIDTH);
+}
+
+export function drawBeautifiedFrame(ctx: CanvasRenderingContext2D, frame: BoundingBox): void {
+  drawFrameWith(ctx, frame, BEAUTIFIED_COLOR, BEAUTIFIED_WIDTH);
+}
+
+export function drawBeautifiedDivider(ctx: CanvasRenderingContext2D, line: AxisLine): void {
+  drawDividerWith(ctx, line, BEAUTIFIED_COLOR, BEAUTIFIED_WIDTH);
+}
+
+function drawFrameWith(
+  ctx: CanvasRenderingContext2D,
+  frame: BoundingBox,
+  color: string,
+  width: number,
+): void {
   const corners = [
     { x: frame.minX, y: frame.minY },
     { x: frame.maxX, y: frame.minY },
@@ -133,13 +156,18 @@ export function drawFrame(ctx: CanvasRenderingContext2D, frame: BoundingBox): vo
     { x: frame.minX, y: frame.maxY },
     { x: frame.minX, y: frame.minY },
   ];
-  drawColoredPath(ctx, corners, GRID_COLOR, GRID_WIDTH);
+  drawColoredPath(ctx, corners, color, width);
 }
 
-export function drawDivider(ctx: CanvasRenderingContext2D, line: AxisLine): void {
+function drawDividerWith(
+  ctx: CanvasRenderingContext2D,
+  line: AxisLine,
+  color: string,
+  width: number,
+): void {
   const offsets = line.doubled ? [-DOUBLE_LINE_OFFSET, DOUBLE_LINE_OFFSET] : [0];
   for (const offset of offsets) {
-    drawColoredPath(ctx, axisLineEnds(line, line.position + offset), GRID_COLOR, GRID_WIDTH);
+    drawColoredPath(ctx, axisLineEnds(line, line.position + offset), color, width);
   }
 }
 

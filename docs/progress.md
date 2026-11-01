@@ -103,7 +103,13 @@ Rezultat: stablo tačno na svih 10 skica (štulp i T-profil: 2 polja levo-desno,
 
 ## U toku: beautification prikaz (korak 6 ka Demo 1)
 
-Čeka dogovor oko predloga.
+- `app/sketch/beautify.ts`: čista funkcija `beautify(strokes, parsed)` odlučuje šta se prikazuje. Kad je ram prepoznat: čist ram i podele (T-profil kao dve crte), rukom nacrtani ostaju samo simboli i cifre i linije koje nisu ušle u mrežu (odbačene), a šum se sakriva. Bez rama: sve kako je nacrtano. Testovi u `beautify.spec.ts`.
+- Komponenta: `computed` nad potezima poziva `parseSketch` + `beautify`, pa se prikaz menja samo na `pointerup`, nikad dok se crta ili stoji. Checkbox "Beautify" (podrazumevano uključen); debug checkbox-ovi su u grupi "Debug:". Snimljeni fajl i dalje sadrži originalne poteze.
+- 207 testova prolazi, `ng build` čist.
+
+### Otvoreno pitanje (korisnik, 2026-11-01)
+
+Korisnik sumnja da je stalna zamena crteža frustrirajuća (npr. kad zastane da razmisli). Čeka se probanje u aplikaciji. Moguće izmene ako se pokaže tačnim: rukom nacrtane linije ostaju bledo vidljive ispod čistih; beautification tek na zahtev (dugme ili taster); ili tek posle pauze bez crtanja.
 
 ## Put do prvog demoa
 

@@ -29,6 +29,11 @@ canvas {
   align-items: center;
 }
 
+.group-label {
+  margin-left: 16px;
+  font-weight: 600;
+}
+
 .tolerance-slider {
   width: 400px;
 }

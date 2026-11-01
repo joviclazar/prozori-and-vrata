@@ -20,6 +20,16 @@
   <span>{{ strokes().length }} strokes</span>
   <label>
     <input
+      #beautifyToggle
+      type="checkbox"
+      [checked]="showBeautified()"
+      (change)="showBeautified.set(beautifyToggle.checked)"
+    />
+    Beautify
+  </label>
+  <span class="group-label">Debug:</span>
+  <label>
+    <input
       #segmentsToggle
       type="checkbox"
       [checked]="showSegments()"

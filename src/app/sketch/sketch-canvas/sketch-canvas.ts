@@ -12,12 +12,16 @@ import {
 import { simplifyPath } from '../../../core/geometry/simplify-path';
 import { parseSketchFile, serializeSketch } from '../../../core/model/sketch-file';
 import { SEGMENTATION_TOLERANCE_PX } from '../../../core/recognition/segmentation/segmentation-config';
+import { parseSketch } from '../../../core/recognition/sketch-parser';
 import { PointerType, Stroke, StrokePoint } from '../../../core/model/stroke';
+import { beautify } from '../beautify';
 import { downloadTextFile, sketchFileName } from '../sketch-file-io';
 import {
   applyStrokeStyle,
   drawAnnotation,
   drawAxisLine,
+  drawBeautifiedDivider,
+  drawBeautifiedFrame,
   drawCell,
   drawDivider,
   drawFrame,
@@ -50,6 +54,10 @@ interface StrokeInProgress {
 export class SketchCanvas {
   protected readonly strokes = signal<readonly Stroke[]>([]);
   protected readonly loadError = signal<string | null>(null);
+  protected readonly showBeautified = signal(true);
+  protected readonly beautified = computed(() =>
+    this.showBeautified() ? beautify(this.strokes(), parseSketch(this.strokes())) : null,
+  );
   protected readonly showSegments = signal(false);
   protected readonly tolerance = signal(SEGMENTATION_TOLERANCE_PX);
   protected readonly showStructure = signal(false);
@@ -87,6 +95,7 @@ export class SketchCanvas {
 
     effect(() => {
       this.strokes();
+      this.beautified();
       this.showSegments();
       this.tolerance();
       this.structure();
@@ -213,8 +222,21 @@ export class SketchCanvas {
       return;
     }
     ctx.clearRect(0, 0, this.cssWidth, this.cssHeight);
-    for (const stroke of this.strokes()) {
-      drawStroke(ctx, stroke.points);
+    const beautified = this.beautified();
+    if (beautified) {
+      if (beautified.frame) {
+        drawBeautifiedFrame(ctx, beautified.frame);
+      }
+      for (const line of beautified.dividers) {
+        drawBeautifiedDivider(ctx, line);
+      }
+      for (const stroke of beautified.handDrawn) {
+        drawStroke(ctx, stroke.points);
+      }
+    } else {
+      for (const stroke of this.strokes()) {
+        drawStroke(ctx, stroke.points);
+      }
     }
     if (this.current) {
       drawStroke(ctx, this.current.points);
