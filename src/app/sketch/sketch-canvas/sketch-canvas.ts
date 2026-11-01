@@ -18,6 +18,7 @@ import {
   applyStrokeStyle,
   drawAnnotation,
   drawAxisLine,
+  drawCell,
   drawDivider,
   drawFrame,
   drawRejected,
@@ -54,8 +55,9 @@ export class SketchCanvas {
   protected readonly showStructure = signal(false);
   protected readonly showAxisLines = signal(false);
   protected readonly showGrid = signal(false);
+  protected readonly showCells = signal(false);
   protected readonly structure = computed(() =>
-    this.showStructure() || this.showAxisLines() || this.showGrid()
+    this.showStructure() || this.showAxisLines() || this.showGrid() || this.showCells()
       ? structureDebugView(this.strokes(), this.tolerance())
       : null,
   );
@@ -233,6 +235,9 @@ export class SketchCanvas {
       for (const line of structure.axisLines) {
         drawAxisLine(ctx, line);
       }
+    }
+    if (structure && this.showCells()) {
+      structure.cells.forEach((bounds, index) => drawCell(ctx, bounds, index));
     }
     if (structure?.grid && this.showGrid()) {
       drawFrame(ctx, structure.grid.frame);

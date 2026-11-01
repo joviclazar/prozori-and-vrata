@@ -1,3 +1,4 @@
+import { BoundingBox } from '../../core/geometry/bounding-box';
 import { Point } from '../../core/geometry/point';
 import { Segment } from '../../core/geometry/segment';
 import { Stroke } from '../../core/model/stroke';
@@ -7,6 +8,7 @@ import {
   mergeCollinear,
   toAxisLine,
 } from '../../core/recognition/grid-builder/axis-lines';
+import { buildGridTree, GridNode } from '../../core/recognition/grid-builder/build-grid-tree';
 import { findGridLines, GridLines } from '../../core/recognition/grid-builder/find-grid-lines';
 import {
   GRID_THRESHOLDS,
@@ -25,6 +27,7 @@ export interface StructureDebugView {
   readonly rejected: readonly (readonly Point[])[];
   readonly axisLines: readonly AxisLine[];
   readonly grid: GridLines | null;
+  readonly cells: readonly BoundingBox[];
 }
 
 export function structureDebugView(
@@ -47,6 +50,11 @@ export function structureDebugView(
   const axisLines = mergeCollinear(lines.map(toAxisLine), MERGE_THRESHOLDS);
 
   const grid = findGridLines(axisLines, GRID_THRESHOLDS);
+  const cells = grid ? collectCells(buildGridTree(grid)) : [];
 
-  return { lines, annotations, rejected: [...noise, ...leftovers], axisLines, grid };
+  return { lines, annotations, rejected: [...noise, ...leftovers], axisLines, grid, cells };
+}
+
+function collectCells(node: GridNode): BoundingBox[] {
+  return node.kind === 'cell' ? [node.bounds] : node.children.flatMap(collectCells);
 }

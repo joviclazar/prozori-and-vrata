@@ -23,6 +23,16 @@ const AXIS_WIDTH = 3;
 const GRID_COLOR = '#6a1b9a';
 const GRID_WIDTH = 3;
 const DOUBLE_LINE_OFFSET = 4;
+const CELL_COLORS = [
+  'rgba(30, 136, 229, 0.18)',
+  'rgba(67, 160, 71, 0.18)',
+  'rgba(251, 140, 0, 0.18)',
+  'rgba(142, 36, 170, 0.18)',
+  'rgba(0, 172, 193, 0.18)',
+  'rgba(229, 57, 53, 0.18)',
+];
+const CELL_LABEL_COLOR = '#333';
+const CELL_LABEL_FONT = 'bold 16px sans-serif';
 
 export function applyStrokeStyle(ctx: CanvasRenderingContext2D): void {
   ctx.strokeStyle = STROKE_COLOR;
@@ -131,6 +141,18 @@ export function drawDivider(ctx: CanvasRenderingContext2D, line: AxisLine): void
   for (const offset of offsets) {
     drawColoredPath(ctx, axisLineEnds(line, line.position + offset), GRID_COLOR, GRID_WIDTH);
   }
+}
+
+export function drawCell(ctx: CanvasRenderingContext2D, bounds: BoundingBox, index: number): void {
+  ctx.save();
+  ctx.fillStyle = CELL_COLORS[index % CELL_COLORS.length];
+  ctx.fillRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+  ctx.fillStyle = CELL_LABEL_COLOR;
+  ctx.font = CELL_LABEL_FONT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(index + 1), (bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2);
+  ctx.restore();
 }
 
 export function drawRejectedAxisLine(ctx: CanvasRenderingContext2D, line: AxisLine): void {

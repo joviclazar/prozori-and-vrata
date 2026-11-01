@@ -2,7 +2,7 @@
 
 Trenutno stanje projekta i sledeći koraci. Opis projekta, arhitektura i pravila rada su u `CLAUDE.md`; ovde je samo ono što se menja iz sesije u sesiju.
 
-Poslednje ažuriranje: 2026-10-29.
+Poslednje ažuriranje: 2026-11-01.
 
 ## Gotovo
 
@@ -35,20 +35,20 @@ Poslednje ažuriranje: 2026-10-29.
 - Debug prikaz: checkbox "Axis lines" (zeleno; spojene linije imaju oznaku poteza, npr. `1+2`).
 - Skica `21-48-18` (strana iz dva poteza, strana precrtana dva puta): oba spajanja tačna, razlika ≤ 3.5 px pri pragu od 26 px; najbliži par koji ne sme da se spoji je 128 px udaljen.
 
-## U toku: ram i podele (korak 3 ka Demo 1)
+### Faza 2, korak 4: ram, podele i dupla linija (gotovo)
 
-### Odluke (potvrđene 2026-10-28)
+#### Odluke (potvrđene 2026-10-28)
 
 - **Ram:** krajnje linije po orijentaciji; pravougaonik (`BoundingBox`) samo od njihovih položaja, krajevi se ne gledaju (otvoreni uglovi prolaze). Svaka strana pokriva ≥ 50% svoje dimenzije rama (samo deo unutar rama). Bez 2 + 2 linije nema rama (`null`).
 - **Podele:** svaki kraj unutrašnje linije udara u granicu (strana rama ili prihvaćena podela suprotne orijentacije koja se pruža preko tog mesta) na ≤ 15% dimenzije rama u pravcu linije; krajevi se lepe za najbližu granicu; "nađi liniju, prihvati" dok ima promena (T-spojevi). Ostalo je odbačeno.
 
-### Merenja na snimljenim skicama
+#### Merenja na snimljenim skicama
 
 - Promašaji na uglovima rama: 1–8% dimenzije, osim `13-26-11`: gornji desni ugao otvoren 26% (gornja strana se završava 130 px pre desne). Pristup koji traži zatvoren pravougaonik bi tu pao.
 - Najlošija pokrivenost strane: 70% (`13-26-11`, gornja).
 - Krajevi podela: ≤ 4% od rama. Sve podele su vertikalne, od vrha do dna, na 47–50% širine; T-spoj i prečka nisu snimljeni.
 
-### Zadaci
+#### Zadaci
 
 1. ~~Odluke, `CLAUDE.md`~~ (Claude).
 2. ~~Config i testovi~~ (Claude): `GRID_THRESHOLDS` u `grid-builder-config.ts`, `find-grid-lines.spec.ts`.
@@ -59,7 +59,7 @@ Poslednje ažuriranje: 2026-10-29.
 
 Rezultat: svih 7 skica daju tačan ram i podele, nijedna linija odbačena. 164 testa u `core/` prolazi.
 
-### Otkriveno: dupla linija (T-profil)
+#### Otkriveno: dupla linija (T-profil)
 
 Korisnik je potvrdio konvenciju (upisano u `CLAUDE.md`): jednostruka linija = štulp, dupla = T-profil; horizontalna podela se uvek crta duplo. Skica `10-29-21-19-15`: dupla vertikalna linija (s5 i s6) na razmaku **15 px** (3.9% najduže linije), a `mergeCollinear` ih spaja u jednu (prag 10%), pa se informacija o duploj liniji gubi. Za poređenje: strana precrtana dva puta (`21-48-18`) ima razmak 0.5 px (0.2%). 
 Rešenje (potvrđeno): `AxisLine.doubled`; spajanje ostaje (dupla linija je jedna podela, položaj na osi T-profila), a spojena linija je `doubled` ako delovi stoje jedan pored drugog (preklapanje ≥ 50% kraćeg) na razmaku ≥ 2% najduže linije, ili je neki deo već bio `doubled`. Ram se uvek crta jednostrukom linijom.
@@ -67,6 +67,31 @@ Rešenje (potvrđeno): `AxisLine.doubled`; spajanje ostaje (dupla linija je jedn
 1. ~~Polje `doubled` na svim mestima, pragovi u `MERGE_THRESHOLDS`, testovi~~ (Claude). `merge` za sada samo prenosi `a.doubled || b.doubled`.
 2. ~~Uslov "jedan pored drugog" u `merge`~~ (Claude, na zahtev korisnika). Na svih 7 skica `doubled` je samo T-profil iz `10-29-21-19-15`; precrtana strana i strana iz dva poteza (`21-48-18`) nisu označene. 173 testa prolazi.
 3. Još 2–3 skice sa duplom linijom i nadsvetlo (korisnik).
+
+## U toku: stablo polja (korak 4 ka Demo 1)
+
+### Nove skice (2026-10-29)
+
+- `21-45-58`: dupla vertikalna, razmak 12 px (2.6%) — najtešnja do sada, 3 px iznad praga od 2%.
+- `21-46-46`: dupla horizontalna (nadsvetlo), razmak 14 px (4.8%); nema podele ispod prečke, pa T-spoj na stvarnoj skici još nije proveren.
+- `21-47-17`: ram jednim potezom, bez podele.
+- Sve tri tačne. Razmak duple linije je u pikselima skoro konstantan (12–15 px), a relativno varira (2.6–4.8%). Odluka: prag ostaje 2%, spušta se na 1% ako dupla linija počne da promiče.
+
+### Odluke (potvrđene 2026-11-01)
+
+- **Algoritam:** rekurzivna "giljotina". Region (na početku ram) seku podele čiji je položaj strogo unutar regiona i čiji raspon pokriva celu dimenziju regiona; nema ih → `cell`, ima ih → `split` sa decom sortiranim po položaju. Bez tolerancija, jer su podele zalepljene.
+- **Krst:** prvo horizontalna podela, kao kod nadsvetla.
+- **Model:** `split` čuva niz podela (`children.length − 1`), jer susedna deca mogu imati različite podele (T-profil i štulp). `direction` je orijentacija linija podele. `CLAUDE.md` (model podataka) ažuriran.
+
+### Zadaci
+
+1. ~~`CLAUDE.md`, `progress.md`~~ (Claude).
+2. ~~Testovi~~ (Claude): `core/recognition/grid-builder/build-grid-tree.spec.ts`.
+3. ~~`buildGridTree` i tip `GridNode`~~ (korisnik; sitnice `const`/`push`/`!==` sredio Claude na zahtev).
+4. Skica: nadsvetlo + podela ispod (T-spoj na stvarnim podacima) (korisnik, posle).
+5. ~~Debug prikaz~~ (Claude): checkbox "Cells", svako polje obojeno, sa rednim brojem (redosled listova stabla).
+
+Rezultat: stablo tačno na svih 10 skica (štulp i T-profil: 2 polja levo-desno, nadsvetlo: 2 polja gore-dole, bez podele: 1 polje). 184 testa prolazi.
 
 ## Put do prvog demoa
 
@@ -78,8 +103,8 @@ Rešenje (potvrđeno): `AxisLine.doubled`; spajanje ostaje (dupla linija je jedn
 | **Demo 1** |||
 | 1 | ~~Izdvajanje strukturnih linija~~ | mali |
 | 2 | ~~Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži~~ | srednji |
-| 3 | Mreža: pronalaženje spoljnog rama i podela | najveći |
-| 4 | Mreža: ram + podele -> polja | srednji |
+| 3 | ~~Mreža: pronalaženje spoljnog rama i podela~~ | najveći |
+| 4 | ~~Mreža: ram + podele -> polja~~ | srednji |
 | 5 | Orkestracija (`sketch-parser.ts`), poziv posle svakog poteza | mali |
 | 6 | Beautification prikaz | srednji (UI) |
 | **Demo 2** |||
