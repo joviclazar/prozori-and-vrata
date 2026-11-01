@@ -8,6 +8,9 @@
 
 <div class="toolbar">
   <button type="button" (click)="clear()">Clear</button>
+  <button type="button" (click)="undo()" [disabled]="strokes().length === 0" title="Ctrl+Z">
+    Undo
+  </button>
   <button type="button" (click)="save()">Save</button>
   <button type="button" (click)="fileInput.click()">Load</button>
   <input

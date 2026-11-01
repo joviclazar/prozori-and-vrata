@@ -50,6 +50,9 @@ interface StrokeInProgress {
   selector: 'app-sketch-canvas',
   styleUrl: './sketch-canvas.css',
   templateUrl: './sketch-canvas.html',
+  host: {
+    '(document:keydown)': 'onKeyDown($event)',
+  },
 })
 export class SketchCanvas {
   protected readonly strokes = signal<readonly Stroke[]>([]);
@@ -168,6 +171,23 @@ export class SketchCanvas {
 
   protected clear(): void {
     this.load([]);
+  }
+
+  protected undo(): void {
+    if (this.current) {
+      return;
+    }
+    this.strokes.update((strokes) => strokes.slice(0, -1));
+  }
+
+  protected onKeyDown(e: KeyboardEvent): void {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      this.undo();
+    }
   }
 
   protected save(): void {
