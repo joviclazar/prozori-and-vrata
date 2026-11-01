@@ -2,24 +2,11 @@ import { BoundingBox } from '../../core/geometry/bounding-box';
 import { Point } from '../../core/geometry/point';
 import { Segment } from '../../core/geometry/segment';
 import { Stroke } from '../../core/model/stroke';
-import { segmentStrokes } from '../../core/recognition/segmentation/segment-strokes';
-import {
-  AxisLine,
-  mergeCollinear,
-  toAxisLine,
-} from '../../core/recognition/grid-builder/axis-lines';
-import { buildGridTree, GridNode } from '../../core/recognition/grid-builder/build-grid-tree';
-import { findGridLines, GridLines } from '../../core/recognition/grid-builder/find-grid-lines';
-import {
-  GRID_THRESHOLDS,
-  MERGE_THRESHOLDS,
-} from '../../core/recognition/grid-builder/grid-builder-config';
-import { MIN_STROKE_LENGTH_PX } from '../../core/recognition/segmentation/segmentation-config';
-import {
-  extractStructuralLines,
-  StructuralLine,
-} from '../../core/recognition/stroke-classifier/extract-structural-lines';
-import { STRUCTURAL_LINE_THRESHOLDS } from '../../core/recognition/stroke-classifier/structural-lines-config';
+import { AxisLine } from '../../core/recognition/grid-builder/axis-lines';
+import { GridNode } from '../../core/recognition/grid-builder/build-grid-tree';
+import { GridLines } from '../../core/recognition/grid-builder/find-grid-lines';
+import { DEFAULT_SKETCH_PARSER_CONFIG, parseSketch } from '../../core/recognition/sketch-parser';
+import { StructuralLine } from '../../core/recognition/stroke-classifier/extract-structural-lines';
 
 export interface StructureDebugView {
   readonly lines: readonly StructuralLine[];
@@ -34,8 +21,10 @@ export function structureDebugView(
   strokes: readonly Stroke[],
   tolerance: number,
 ): StructureDebugView {
-  const segmented = segmentStrokes(strokes, tolerance, MIN_STROKE_LENGTH_PX);
-  const { lines, annotations } = extractStructuralLines(segmented, STRUCTURAL_LINE_THRESHOLDS);
+  const { segmented, lines, annotations, axisLines, grid, tree } = parseSketch(strokes, {
+    ...DEFAULT_SKETCH_PARSER_CONFIG,
+    segmentationTolerancePx: tolerance,
+  });
 
   const kept = new Set<Stroke>(segmented.map((s) => s.stroke));
   const annotated = new Set<Stroke>(annotations);
@@ -47,10 +36,7 @@ export function structureDebugView(
     .flatMap((s) => s.segments.filter((segment) => !used.has(segment)))
     .map((segment) => [segment.start, segment.end]);
 
-  const axisLines = mergeCollinear(lines.map(toAxisLine), MERGE_THRESHOLDS);
-
-  const grid = findGridLines(axisLines, GRID_THRESHOLDS);
-  const cells = grid ? collectCells(buildGridTree(grid)) : [];
+  const cells = tree === null ? [] : collectCells(tree);
 
   return { lines, annotations, rejected: [...noise, ...leftovers], axisLines, grid, cells };
 }

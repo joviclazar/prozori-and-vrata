@@ -61,29 +61,29 @@ Rezultat: svih 7 skica daju tačan ram i podele, nijedna linija odbačena. 164 t
 
 #### Otkriveno: dupla linija (T-profil)
 
-Korisnik je potvrdio konvenciju (upisano u `CLAUDE.md`): jednostruka linija = štulp, dupla = T-profil; horizontalna podela se uvek crta duplo. Skica `10-29-21-19-15`: dupla vertikalna linija (s5 i s6) na razmaku **15 px** (3.9% najduže linije), a `mergeCollinear` ih spaja u jednu (prag 10%), pa se informacija o duploj liniji gubi. Za poređenje: strana precrtana dva puta (`21-48-18`) ima razmak 0.5 px (0.2%). 
+Korisnik je potvrdio konvenciju (upisano u `CLAUDE.md`): jednostruka linija = štulp, dupla = T-profil; horizontalna podela se uvek crta duplo. Skica `10-29-21-19-15`: dupla vertikalna linija (s5 i s6) na razmaku **15 px** (3.9% najduže linije), a `mergeCollinear` ih spaja u jednu (prag 10%), pa se informacija o duploj liniji gubi. Za poređenje: strana precrtana dva puta (`21-48-18`) ima razmak 0.5 px (0.2%).
 Rešenje (potvrđeno): `AxisLine.doubled`; spajanje ostaje (dupla linija je jedna podela, položaj na osi T-profila), a spojena linija je `doubled` ako delovi stoje jedan pored drugog (preklapanje ≥ 50% kraćeg) na razmaku ≥ 2% najduže linije, ili je neki deo već bio `doubled`. Ram se uvek crta jednostrukom linijom.
 
 1. ~~Polje `doubled` na svim mestima, pragovi u `MERGE_THRESHOLDS`, testovi~~ (Claude). `merge` za sada samo prenosi `a.doubled || b.doubled`.
 2. ~~Uslov "jedan pored drugog" u `merge`~~ (Claude, na zahtev korisnika). Na svih 7 skica `doubled` je samo T-profil iz `10-29-21-19-15`; precrtana strana i strana iz dva poteza (`21-48-18`) nisu označene. 173 testa prolazi.
 3. Još 2–3 skice sa duplom linijom i nadsvetlo (korisnik).
 
-## U toku: stablo polja (korak 4 ka Demo 1)
+### Faza 2, korak 5: stablo polja (gotovo)
 
-### Nove skice (2026-10-29)
+#### Nove skice (2026-10-29)
 
 - `21-45-58`: dupla vertikalna, razmak 12 px (2.6%) — najtešnja do sada, 3 px iznad praga od 2%.
 - `21-46-46`: dupla horizontalna (nadsvetlo), razmak 14 px (4.8%); nema podele ispod prečke, pa T-spoj na stvarnoj skici još nije proveren.
 - `21-47-17`: ram jednim potezom, bez podele.
 - Sve tri tačne. Razmak duple linije je u pikselima skoro konstantan (12–15 px), a relativno varira (2.6–4.8%). Odluka: prag ostaje 2%, spušta se na 1% ako dupla linija počne da promiče.
 
-### Odluke (potvrđene 2026-11-01)
+#### Odluke (potvrđene 2026-11-01)
 
 - **Algoritam:** rekurzivna "giljotina". Region (na početku ram) seku podele čiji je položaj strogo unutar regiona i čiji raspon pokriva celu dimenziju regiona; nema ih → `cell`, ima ih → `split` sa decom sortiranim po položaju. Bez tolerancija, jer su podele zalepljene.
 - **Krst:** prvo horizontalna podela, kao kod nadsvetla.
 - **Model:** `split` čuva niz podela (`children.length − 1`), jer susedna deca mogu imati različite podele (T-profil i štulp). `direction` je orijentacija linija podele. `CLAUDE.md` (model podataka) ažuriran.
 
-### Zadaci
+#### Zadaci
 
 1. ~~`CLAUDE.md`, `progress.md`~~ (Claude).
 2. ~~Testovi~~ (Claude): `core/recognition/grid-builder/build-grid-tree.spec.ts`.
@@ -93,26 +93,38 @@ Rešenje (potvrđeno): `AxisLine.doubled`; spajanje ostaje (dupla linija je jedn
 
 Rezultat: stablo tačno na svih 10 skica (štulp i T-profil: 2 polja levo-desno, nadsvetlo: 2 polja gore-dole, bez podele: 1 polje). 184 testa prolazi.
 
+### Faza 2, korak 6: orkestracija i golden testovi (gotovo)
+
+- `core/recognition/sketch-parser.ts`: `parseSketch(strokes, config?)` vraća sve međurezultate i stablo; `SketchParserConfig` + `DEFAULT_SKETCH_PARSER_CONFIG` objedinjuju sve pragove.
+- `sketch-parser.spec.ts`: jedinični testovi (prazan ulaz, ram + podela, šum i simboli, nezavisnost od redosleda crtanja, nema rama, prosleđivanje config-a).
+- `sketch-parser.golden.spec.ts`: svih 10 snimljenih skica; očekivano stablo i broj anotacija po skici. `resolveJsonModule` uključen u `tsconfig.spec.json`.
+- `app/sketch/structure-debug.ts` više ne ponavlja pipeline, nego poziva `parseSketch` (tolerancija sa slajdera ide kroz config) i dodaje samo debug podatke (odbačeno, polja).
+- Node je ažuriran na v22.23.4, pa `npm test` i `ng build` rade: 203 testa prolazi.
+
+## U toku: beautification prikaz (korak 6 ka Demo 1)
+
+Čeka dogovor oko predloga.
+
 ## Put do prvog demoa
 
 **Demo 1:** nacrtani ram i podele (bilo kojim stilom) postaju čist tehnički crtež sa prikazanim poljima.
 **Demo 2:** prepoznat ceo prozor (ram, podele, tip otvaranja svakog krila), dimenzije unete ručno, prikazan `WindowModel`.
 
-| # | Korak | Obim |
-|---|---|---|
-| **Demo 1** |||
-| 1 | ~~Izdvajanje strukturnih linija~~ | mali |
-| 2 | ~~Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži~~ | srednji |
-| 3 | ~~Mreža: pronalaženje spoljnog rama i podela~~ | najveći |
-| 4 | ~~Mreža: ram + podele -> polja~~ | srednji |
-| 5 | Orkestracija (`sketch-parser.ts`), poziv posle svakog poteza | mali |
-| 6 | Beautification prikaz | srednji (UI) |
-| **Demo 2** |||
-| 7 | Anotacije po položaju | mali |
-| 8 | Simboli: geometrijsko pravilo (smer vrha), `<` + `Λ`, konvencija ručka/šarke | srednji |
-| 9 | `WindowModel` iz mreže + simbola, stub/štulp | srednji |
-| 10 | Ručni unos dimenzija | mali (UI) |
-| 11 | Prikaz modela | mali (UI) |
+| #          | Korak                                                                        | Obim         |
+| ---------- | ---------------------------------------------------------------------------- | ------------ |
+| **Demo 1** |                                                                              |              |
+| 1          | ~~Izdvajanje strukturnih linija~~                                            | mali         |
+| 2          | ~~Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži~~                 | srednji      |
+| 3          | ~~Mreža: pronalaženje spoljnog rama i podela~~                               | najveći      |
+| 4          | ~~Mreža: ram + podele -> polja~~                                             | srednji      |
+| 5          | ~~Orkestracija (`sketch-parser.ts`), poziv posle svakog poteza~~             | mali         |
+| 6          | Beautification prikaz                                                        | srednji (UI) |
+| **Demo 2** |                                                                              |              |
+| 7          | Anotacije po položaju                                                        | mali         |
+| 8          | Simboli: geometrijsko pravilo (smer vrha), `<` + `Λ`, konvencija ručka/šarke | srednji      |
+| 9          | `WindowModel` iz mreže + simbola, stub/štulp                                 | srednji      |
+| 10         | Ručni unos dimenzija                                                         | mali (UI)    |
+| 11         | Prikaz modela                                                                | mali (UI)    |
 
 Svesno odloženo posle demoa: Web Worker (prepoznavanje traje par ms; kasnije se menja samo mesto poziva), prepoznavanje cifara (ONNX), $P recognizer (za poređenje u radu).
 
