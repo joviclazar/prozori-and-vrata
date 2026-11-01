@@ -196,6 +196,29 @@ describe('findChevrons', () => {
     expect(findChevrons([a, b, c], THRESHOLDS)).toHaveLength(1);
   });
 
+  it('remembers the stroke a chevron comes from', () => {
+    const stroke = segmented(7, [
+      { x: 150, y: 200 },
+      { x: 250, y: 240 },
+      { x: 150, y: 280 },
+    ]);
+
+    expect(findChevrons([stroke], THRESHOLDS)[0].strokeIds).toEqual([7]);
+  });
+
+  it('remembers both strokes of a chevron joined from two strokes', () => {
+    const upper = segmented(8, [
+      { x: 424, y: 207 },
+      { x: 492, y: 264 },
+    ]);
+    const lower = segmented(9, [
+      { x: 492, y: 264 },
+      { x: 428, y: 314 },
+    ]);
+
+    expect(findChevrons([upper, lower], THRESHOLDS)[0].strokeIds).toEqual([8, 9]);
+  });
+
   it('finds "<" and "Λ" drawn as two strokes, as in the recorded sketches', () => {
     const turn = segmented(1, [
       { x: 350, y: 200 },

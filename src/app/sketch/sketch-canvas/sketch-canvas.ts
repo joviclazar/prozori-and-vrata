@@ -25,6 +25,7 @@ import {
   drawCell,
   drawDivider,
   drawFrame,
+  drawOpeningSymbol,
   drawRejected,
   drawRejectedAxisLine,
   drawSegment,
@@ -249,6 +250,9 @@ export class SketchCanvas {
       }
       for (const line of beautified.dividers) {
         drawBeautifiedDivider(ctx, line);
+      }
+      for (const symbol of beautified.symbols) {
+        drawOpeningSymbol(ctx, symbol.bounds, symbol.opening, symbol.hinge);
       }
       for (const stroke of beautified.handDrawn) {
         drawStroke(ctx, stroke.points);

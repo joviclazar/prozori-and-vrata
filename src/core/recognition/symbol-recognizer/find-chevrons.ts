@@ -8,6 +8,7 @@ export type ApexDirection = 'left' | 'right' | 'up' | 'down';
 export interface Chevron {
   readonly apex: Point;
   readonly direction: ApexDirection;
+  readonly strokeIds: readonly number[];
 }
 
 interface EndPairing {
@@ -35,8 +36,8 @@ export function findChevrons(
   strokes: readonly SegmentedStroke[],
   thresholds: SymbolThresholds,
 ): Chevron[] {
-  const inStrokes = strokes.flatMap((s) => chevronsInStroke(s.segments, thresholds));
-  const singles = strokes.filter((s) => s.segments.length === 1).map((s) => s.segments[0]);
+  const inStrokes = strokes.flatMap((s) => chevronsInStroke(s, thresholds));
+  const singles = strokes.filter((s) => s.segments.length === 1);
   return [...inStrokes, ...joinedChevrons(singles, thresholds)];
 }
 
@@ -44,6 +45,7 @@ function chevronFromArms(
   endA: Point,
   apex: Point,
   endB: Point,
+  strokeIds: readonly number[],
   thresholds: SymbolThresholds,
 ): Chevron | null {
   const armA: Segment = { start: endA, end: apex };
@@ -60,16 +62,18 @@ function chevronFromArms(
     return null;
   }
 
-  return { apex, direction: apexDirection(apex, endA, endB) };
+  return { apex, direction: apexDirection(apex, endA, endB), strokeIds };
 }
 
-function chevronsInStroke(segments: readonly Segment[], thresholds: SymbolThresholds): Chevron[] {
+function chevronsInStroke(stroke: SegmentedStroke, thresholds: SymbolThresholds): Chevron[] {
+  const { segments } = stroke;
   const chevrons: Chevron[] = [];
   for (let i = 1; i < segments.length; i++) {
     const chevron = chevronFromArms(
       segments[i - 1].start,
       segments[i].start,
       segments[i].end,
+      [stroke.stroke.id],
       thresholds,
     );
     if (chevron !== null) {
@@ -79,7 +83,10 @@ function chevronsInStroke(segments: readonly Segment[], thresholds: SymbolThresh
   return chevrons;
 }
 
-function joinedChevrons(singles: readonly Segment[], thresholds: SymbolThresholds): Chevron[] {
+function joinedChevrons(
+  singles: readonly SegmentedStroke[],
+  thresholds: SymbolThresholds,
+): Chevron[] {
   const chevrons: Chevron[] = [];
   const used = new Set<number>();
 
@@ -89,14 +96,17 @@ function joinedChevrons(singles: readonly Segment[], thresholds: SymbolThreshold
         continue;
       }
 
-      const { nearA, nearB, farA, farB } = closestEnds(singles[i], singles[j]);
-      const shorter = Math.min(segmentLength(singles[i]), segmentLength(singles[j]));
+      const a = singles[i].segments[0];
+      const b = singles[j].segments[0];
+      const { nearA, nearB, farA, farB } = closestEnds(a, b);
+      const shorter = Math.min(segmentLength(a), segmentLength(b));
       if (distance(nearA, nearB) > thresholds.maxJoinGapRatio * shorter) {
         continue;
       }
 
       const apex = { x: (nearA.x + nearB.x) / 2, y: (nearA.y + nearB.y) / 2 };
-      const chevron = chevronFromArms(farA, apex, farB, thresholds);
+      const strokeIds = [singles[i].stroke.id, singles[j].stroke.id];
+      const chevron = chevronFromArms(farA, apex, farB, strokeIds, thresholds);
       if (chevron !== null) {
         chevrons.push(chevron);
         used.add(i);

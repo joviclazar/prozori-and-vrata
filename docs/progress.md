@@ -149,6 +149,11 @@ Korisnik je unapred sumnjao da će stalna zamena crteža biti frustrirajuća; po
 
 Rezultat: otvaranja tačna na svih 10 skica, uključujući `>` iz dva poteza (`21-48-18`) i `>` od 85° (`21-19-15`). 249 testova prolazi.
 
+### Usput (2026-11-01)
+
+- **Undo** poslednjeg poteza: dugme i Ctrl+Z (ne reaguje dok se kuca u polje za unos).
+- **Beautification simbola** (deo koraka 11, varijanta A po izboru korisnika): prepoznato otvaranje se crta preko celog polja kao na tehničkim crtežima, linije od uglova na strani šarki do sredine strane ručke (tanko, uvučeno od ivica). Fiksno staklo bez simbola; nepoznat simbol ostaje rukom nacrtan. Sakrivaju se samo potezi koji su dali ševron (`Chevron.strokeIds`), ostali potezi u polju ostaju. 255 testova prolazi.
+
 ## Put do demoa
 
 **Demo 1 (dostignut 2026-11-01):** nacrtani ram i podele (bilo kojim stilom) postaju čist tehnički crtež sa prikazanim poljima.

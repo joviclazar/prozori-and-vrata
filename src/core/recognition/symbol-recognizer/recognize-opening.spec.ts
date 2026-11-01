@@ -3,7 +3,7 @@ import { ApexDirection, Chevron } from './find-chevrons';
 import { recognizeOpening } from './recognize-opening';
 
 function chevrons(...directions: ApexDirection[]): Chevron[] {
-  return directions.map((direction) => ({ apex: { x: 0, y: 0 }, direction }));
+  return directions.map((direction) => ({ apex: { x: 0, y: 0 }, direction, strokeIds: [] }));
 }
 
 describe('recognizeOpening', () => {

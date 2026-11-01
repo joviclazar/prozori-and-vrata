@@ -1,6 +1,7 @@
 import { Point } from '../../core/geometry/point';
 import { BoundingBox } from '../../core/geometry/bounding-box';
 import { Segment } from '../../core/geometry/segment';
+import { HingeSide, Opening } from '../../core/model/window-model';
 import { AxisLine } from '../../core/recognition/grid-builder/axis-lines';
 
 const STROKE_COLOR = '#222';
@@ -25,6 +26,10 @@ const GRID_WIDTH = 3;
 const DOUBLE_LINE_OFFSET = 4;
 const BEAUTIFIED_COLOR = '#222';
 const BEAUTIFIED_WIDTH = 2.5;
+const SYMBOL_COLOR = '#555';
+const SYMBOL_WIDTH = 1.5;
+const SYMBOL_INSET = 8;
+const SYMBOL_MAX_INSET_RATIO = 0.1;
 const CELL_COLORS = [
   'rgba(30, 136, 229, 0.18)',
   'rgba(67, 160, 71, 0.18)',
@@ -141,6 +146,41 @@ export function drawBeautifiedFrame(ctx: CanvasRenderingContext2D, frame: Boundi
 
 export function drawBeautifiedDivider(ctx: CanvasRenderingContext2D, line: AxisLine): void {
   drawDividerWith(ctx, line, BEAUTIFIED_COLOR, BEAUTIFIED_WIDTH);
+}
+
+export function drawOpeningSymbol(
+  ctx: CanvasRenderingContext2D,
+  bounds: BoundingBox,
+  opening: Opening,
+  hinge: HingeSide,
+): void {
+  const inset = Math.min(
+    SYMBOL_INSET,
+    SYMBOL_MAX_INSET_RATIO * Math.min(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY),
+  );
+  const left = bounds.minX + inset;
+  const right = bounds.maxX - inset;
+  const top = bounds.minY + inset;
+  const bottom = bounds.maxY - inset;
+  const middleX = (left + right) / 2;
+  const middleY = (top + bottom) / 2;
+
+  const turns = opening === 'turn' || opening === 'tilt_turn';
+  const tilts = opening === 'tilt' || opening === 'tilt_turn';
+
+  if (turns && hinge === 'left') {
+    drawSymbolLines(ctx, { x: left, y: top }, { x: right, y: middleY }, { x: left, y: bottom });
+  }
+  if (turns && hinge === 'right') {
+    drawSymbolLines(ctx, { x: right, y: top }, { x: left, y: middleY }, { x: right, y: bottom });
+  }
+  if (tilts) {
+    drawSymbolLines(ctx, { x: left, y: bottom }, { x: middleX, y: top }, { x: right, y: bottom });
+  }
+}
+
+function drawSymbolLines(ctx: CanvasRenderingContext2D, from: Point, apex: Point, to: Point): void {
+  drawColoredPath(ctx, [from, apex, to], SYMBOL_COLOR, SYMBOL_WIDTH);
 }
 
 function drawFrameWith(

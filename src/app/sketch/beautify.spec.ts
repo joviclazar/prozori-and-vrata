@@ -45,6 +45,21 @@ const floating = polyline(5, [
   { x: 400, y: 320 },
 ]);
 
+const tilt = polyline(6, [
+  { x: 120, y: 330 },
+  { x: 160, y: 170 },
+  { x: 200, y: 330 },
+]);
+const note = polyline(7, [
+  { x: 130, y: 370 },
+  { x: 180, y: 370 },
+]);
+const vee = polyline(8, [
+  { x: 350, y: 200 },
+  { x: 400, y: 280 },
+  { x: 450, y: 200 },
+]);
+
 function run(strokes: readonly Stroke[]) {
   return beautify(strokes, parseSketch(strokes));
 }
@@ -53,15 +68,46 @@ describe('beautify', () => {
   it('keeps every stroke hand-drawn while there is no frame', () => {
     const strokes = [divider, chevron];
 
-    expect(run(strokes)).toEqual({ frame: null, dividers: [], handDrawn: strokes });
+    expect(run(strokes)).toEqual({ frame: null, dividers: [], symbols: [], handDrawn: strokes });
   });
 
-  it('replaces the frame and the divider with clean lines and keeps the symbol hand-drawn', () => {
-    const result = run([frame, chevron, divider]);
+  it('replaces the frame and the divider with clean lines', () => {
+    const result = run([frame, divider]);
 
     expect(result.frame).toEqual({ minX: 100, maxX: 500, minY: 100, maxY: 400 });
     expect(result.dividers).toHaveLength(1);
-    expect(result.handDrawn).toEqual([chevron]);
+    expect(result.handDrawn).toEqual([]);
+  });
+
+  it('replaces a recognized symbol with a clean symbol for its cell', () => {
+    const result = run([frame, chevron, tilt, divider]);
+
+    expect(result.symbols).toEqual([
+      {
+        bounds: { minX: 100, maxX: 301, minY: 100, maxY: 400 },
+        opening: 'tilt_turn',
+        hinge: 'left',
+      },
+    ]);
+    expect(result.handDrawn).toEqual([]);
+  });
+
+  it('draws no symbol for fixed glass', () => {
+    expect(run([frame, divider]).symbols).toEqual([]);
+  });
+
+  it('keeps strokes in a cell that are not part of the symbol hand-drawn', () => {
+    const result = run([frame, chevron, note, divider]);
+
+    expect(result.symbols).toHaveLength(1);
+    expect(result.handDrawn).toEqual([note]);
+  });
+
+  it('keeps an unknown symbol hand-drawn and draws no clean symbol for it', () => {
+    const result = run([frame, divider, vee]);
+
+    expect(result.symbols).toEqual([]);
+    expect(result.handDrawn).toEqual([vee]);
   });
 
   it('hides noise such as an accidental click', () => {
