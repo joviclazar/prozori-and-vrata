@@ -11,6 +11,7 @@ import sketch_2026_10_29_21_46_46 from '../../../test-data/sketches/sketch-2026-
 import sketch_2026_10_29_21_47_17 from '../../../test-data/sketches/sketch-2026-10-29-21-47-17.json';
 import { parseSketchFile } from '../model/sketch-file';
 import { GridNode } from './grid-builder/build-grid-tree';
+import { OpeningResult } from './symbol-recognizer/recognize-opening';
 import { parseSketch } from './sketch-parser';
 
 interface GoldenCase {
@@ -19,6 +20,7 @@ interface GoldenCase {
   readonly json: unknown;
   readonly tree: string;
   readonly annotations: number;
+  readonly openings: readonly string[];
 }
 
 const CASES: readonly GoldenCase[] = [
@@ -28,6 +30,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_16_10_25_16,
     tree: 'vertical[stulp](cell, cell)',
     annotations: 9,
+    openings: ['turn left', 'tilt_turn right'],
   },
   {
     name: '2026-10-20-13-25-22',
@@ -35,6 +38,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_20_13_25_22,
     tree: 'vertical[stulp](cell, cell)',
     annotations: 8,
+    openings: ['turn left', 'tilt_turn right'],
   },
   {
     name: '2026-10-20-13-25-42',
@@ -42,6 +46,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_20_13_25_42,
     tree: 'cell',
     annotations: 8,
+    openings: ['tilt_turn left'],
   },
   {
     name: '2026-10-20-13-26-11',
@@ -49,6 +54,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_20_13_26_11,
     tree: 'vertical[stulp](cell, cell)',
     annotations: 9,
+    openings: ['turn left', 'tilt_turn right'],
   },
   {
     name: '2026-10-20-13-26-37',
@@ -56,6 +62,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_20_13_26_37,
     tree: 'cell',
     annotations: 6,
+    openings: ['tilt_turn left'],
   },
   {
     name: '2026-10-28-21-48-18',
@@ -63,6 +70,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_28_21_48_18,
     tree: 'vertical[stulp](cell, cell)',
     annotations: 4,
+    openings: ['turn left', 'tilt_turn right'],
   },
   {
     name: '2026-10-29-21-19-15',
@@ -70,6 +78,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_29_21_19_15,
     tree: 'vertical[mullion](cell, cell)',
     annotations: 9,
+    openings: ['tilt_turn left', 'turn right'],
   },
   {
     name: '2026-10-29-21-45-58',
@@ -77,6 +86,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_29_21_45_58,
     tree: 'vertical[mullion](cell, cell)',
     annotations: 9,
+    openings: ['tilt_turn left', 'tilt_turn right'],
   },
   {
     name: '2026-10-29-21-46-46',
@@ -84,6 +94,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_29_21_46_46,
     tree: 'horizontal[mullion](cell, cell)',
     annotations: 9,
+    openings: ['fixed', 'tilt_turn right'],
   },
   {
     name: '2026-10-29-21-47-17',
@@ -91,6 +102,7 @@ const CASES: readonly GoldenCase[] = [
     json: sketch_2026_10_29_21_47_17,
     tree: 'cell',
     annotations: 8,
+    openings: ['tilt_turn left'],
   },
 ];
 
@@ -103,13 +115,21 @@ function summarize(node: GridNode): string {
   return `${node.direction}[${dividers}](${children})`;
 }
 
+function describeOpening(result: OpeningResult): string {
+  if (result.kind === 'unknown') {
+    return `unknown(${result.directions.join(', ')})`;
+  }
+  return result.hinge === null ? result.opening : `${result.opening} ${result.hinge}`;
+}
+
 describe('parseSketch on recorded sketches', () => {
-  it.each(CASES)('$name ($drawn)', ({ json, tree, annotations }) => {
+  it.each(CASES)('$name ($drawn)', ({ json, tree, annotations, openings }) => {
     const { strokes } = parseSketchFile(JSON.stringify(json));
     const result = parseSketch(strokes);
 
     expect(result.tree && summarize(result.tree)).toBe(tree);
     expect(result.annotations).toHaveLength(annotations);
     expect(result.grid?.rejected).toEqual([]);
+    expect(result.cells.map((c) => describeOpening(c.opening))).toEqual(openings);
   });
 });

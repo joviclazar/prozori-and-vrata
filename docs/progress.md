@@ -101,38 +101,81 @@ Rezultat: stablo tačno na svih 10 skica (štulp i T-profil: 2 polja levo-desno,
 - `app/sketch/structure-debug.ts` više ne ponavlja pipeline, nego poziva `parseSketch` (tolerancija sa slajdera ide kroz config) i dodaje samo debug podatke (odbačeno, polja).
 - Node je ažuriran na v22.23.4, pa `npm test` i `ng build` rade: 203 testa prolazi.
 
-## U toku: beautification prikaz (korak 6 ka Demo 1)
+### Faza 2, korak 7: beautification prikaz (gotovo, Demo 1 dostignut)
 
 - `app/sketch/beautify.ts`: čista funkcija `beautify(strokes, parsed)` odlučuje šta se prikazuje. Kad je ram prepoznat: čist ram i podele (T-profil kao dve crte), rukom nacrtani ostaju samo simboli i cifre i linije koje nisu ušle u mrežu (odbačene), a šum se sakriva. Bez rama: sve kako je nacrtano. Testovi u `beautify.spec.ts`.
 - Komponenta: `computed` nad potezima poziva `parseSketch` + `beautify`, pa se prikaz menja samo na `pointerup`, nikad dok se crta ili stoji. Checkbox "Beautify" (podrazumevano uključen); debug checkbox-ovi su u grupi "Debug:". Snimljeni fajl i dalje sadrži originalne poteze.
 - 207 testova prolazi, `ng build` čist.
 
-### Otvoreno pitanje (korisnik, 2026-11-01)
+#### Proba (korisnik, 2026-11-01)
 
-Korisnik sumnja da je stalna zamena crteža frustrirajuća (npr. kad zastane da razmisli). Čeka se probanje u aplikaciji. Moguće izmene ako se pokaže tačnim: rukom nacrtane linije ostaju bledo vidljive ispod čistih; beautification tek na zahtev (dugme ili taster); ili tek posle pauze bez crtanja.
+Korisnik je unapred sumnjao da će stalna zamena crteža biti frustrirajuća; posle probe: "brutalno je dobro". Rezervne opcije, ako se problem ipak pojavi: bledi original ispod čistog crteža, beautification na zahtev, ili posle pauze.
 
-## Put do prvog demoa
+## U toku: Demo 2 (koraci 7 i 8 gotovi; sledeći je 9, `WindowModel`)
 
-**Demo 1:** nacrtani ram i podele (bilo kojim stilom) postaju čist tehnički crtež sa prikazanim poljima.
-**Demo 2:** prepoznat ceo prozor (ram, podele, tip otvaranja svakog krila), dimenzije unete ručno, prikazan `WindowModel`.
+### Merenja na snimljenim skicama (2026-11-01)
 
-| #          | Korak                                                                        | Obim         |
-| ---------- | ---------------------------------------------------------------------------- | ------------ |
-| **Demo 1** |                                                                              |              |
-| 1          | ~~Izdvajanje strukturnih linija~~                                            | mali         |
-| 2          | ~~Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži~~                 | srednji      |
-| 3          | ~~Mreža: pronalaženje spoljnog rama i podela~~                               | najveći      |
-| 4          | ~~Mreža: ram + podele -> polja~~                                             | srednji      |
-| 5          | ~~Orkestracija (`sketch-parser.ts`), poziv posle svakog poteza~~             | mali         |
-| 6          | Beautification prikaz                                                        | srednji (UI) |
-| **Demo 2** |                                                                              |              |
-| 7          | Anotacije po položaju                                                        | mali         |
-| 8          | Simboli: geometrijsko pravilo (smer vrha), `<` + `Λ`, konvencija ručka/šarke | srednji      |
-| 9          | `WindowModel` iz mreže + simbola, stub/štulp                                 | srednji      |
-| 10         | Ručni unos dimenzija                                                         | mali (UI)    |
-| 11         | Prikaz modela                                                                | mali (UI)    |
+- Centar poteza: svi simboli u tačnom polju, sve cifre van rama (ispod ili desno).
+- Smer vrha: `>` −14…−1°, `<` 164…176°, `Λ` 81…97°; granice na 45°, rezerva ≥ 29°.
+- Ugao temena simbola 17–85°: `>` u `21-19-15` ima 85°, pa prag veta (75°) ne može da se koristi; za simbole 110°. Odnos krakova 0.78–0.99.
+- `<` + `Λ` uvek dva poteza. `>` u `21-48-18` nacrtan kao dva kraka (razmak krajeva 0 px, pauza 900 ms).
 
-Svesno odloženo posle demoa: Web Worker (prepoznavanje traje par ms; kasnije se menja samo mesto poziva), prepoznavanje cifara (ONNX), $P recognizer (za poređenje u radu).
+### Odluke (potvrđene 2026-11-01)
+
+- Pravila iz `CLAUDE.md` (pipeline, korak 3 "Anotacije po poljima" i korak 4) i očekivana otvaranja po skicama:
+
+| Skica      | Polje 1                         | Polje 2                    |
+| ---------- | ------------------------------- | -------------------------- |
+| `10-25-16` | okretno, šarke levo             | okretno-kipno, šarke desno |
+| `13-25-22` | okretno, levo                   | okretno-kipno, desno       |
+| `13-25-42` | okretno-kipno, levo             |                            |
+| `13-26-11` | okretno, levo                   | okretno-kipno, desno       |
+| `13-26-37` | okretno-kipno, levo             |                            |
+| `21-48-18` | okretno, levo (`>` iz 2 poteza) | okretno-kipno, desno       |
+| `21-19-15` | okretno-kipno, levo             | okretno, desno             |
+| `21-45-58` | okretno-kipno, levo             | okretno-kipno, desno       |
+| `21-46-46` | fiksno (nadsvetlo)              | okretno-kipno, desno       |
+| `21-47-17` | okretno-kipno, levo             |                            |
+
+### Zadaci
+
+1. ~~Potvrda~~ (korisnik).
+2. ~~`CLAUDE.md`, `progress.md`~~ (Claude).
+3. ~~Tipovi i testovi~~ (Claude): `core/model/window-model.ts` (`Opening`, `HingeSide`), `GridCell` i `gridCells` u `build-grid-tree.ts` (preseljeno iz debug prikaza), `symbol-config.ts`, `opening-convention.ts`; testovi `place-annotations.spec.ts`, `find-chevrons.spec.ts`, `recognize-opening.spec.ts`.
+4. ~~`placeAnnotations`~~ (Claude, na zahtev korisnika).
+5. ~~`apexDirection`, `recognizeOpening`~~ (Claude, na zahtev korisnika).
+6. ~~`findChevrons`~~ (Claude, na zahtev korisnika).
+7. ~~Povezivanje~~ (Claude): `parseSketch` vraća i `cells` (polje, potezi, ševroni, otvaranje) i `outside` (potezi van rama sa stranom); `SketchParserConfig.symbols`. Debug "Cells" ispisuje otvaranje u svakom polju. Golden testovi proveravaju otvaranja iz tabele.
+
+Rezultat: otvaranja tačna na svih 10 skica, uključujući `>` iz dva poteza (`21-48-18`) i `>` od 85° (`21-19-15`). 249 testova prolazi.
+
+## Put do demoa
+
+**Demo 1 (dostignut 2026-11-01):** nacrtani ram i podele (bilo kojim stilom) postaju čist tehnički crtež sa prikazanim poljima.
+
+**Demo 2:** prepoznat ceo prozor (ram, podele, T-profil/štulp, tip otvaranja i strana šarki svakog krila), širina i visina unete ručno, prikazan `WindowModel` sa upozorenjima. Cifre nacrtane van rama se za sada ignorišu (odluka korisnika 2026-11-01: dimenzije ručno, prepoznavanje cifara posle Demo 2).
+
+| #          | Korak                                                                                                                                      | Obim         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| **Demo 1** |                                                                                                                                            |              |
+| 1          | ~~Izdvajanje strukturnih linija~~                                                                                                          | mali         |
+| 2          | ~~Mreža: ispravljanje na 0°/90°, spajanje kolinearnih duži~~                                                                               | srednji      |
+| 3          | ~~Mreža: pronalaženje spoljnog rama i podela~~                                                                                             | najveći      |
+| 4          | ~~Mreža: ram + podele -> polja~~                                                                                                           | srednji      |
+| 5          | ~~Orkestracija (`sketch-parser.ts`), poziv posle svakog poteza~~                                                                           | mali         |
+| 6          | ~~Beautification prikaz~~                                                                                                                  | srednji (UI) |
+| **Demo 2** |                                                                                                                                            |              |
+| 7          | Anotacije po poljima: centar poteza → polje ili "van rama"                                                                                 | mali         |
+| 8          | Otvaranje polja: ševroni (oštra temena), smer vrha (`>` `<` `Λ`), spajanje u otvaranje + šarke; konvencija na jednom mestu                 | srednji      |
+| 9          | `WindowModel`: stablo + otvaranja + dimenzije; T-profil/štulp; glavno krilo kod štulpa (ono sa kipom); `null` dimenzije dok nisu unete     | srednji      |
+| 10         | Validacija: upozorenja (štulp uz fiksno, jednostruka horizontalna, ručke na spoljnim stranama kod štulpa, nepoznat simbol, nema dimenzija) | mali         |
+| 11         | UI: unos širine i visine (cm), panel sa modelom i upozorenjima, beautification simbola                                                     | srednji (UI) |
+| 12         | Golden testovi za `WindowModel` na snimljenim skicama                                                                                      | mali         |
+| opciono    | Klik na polje menja otvaranje                                                                                                              | mali (UI)    |
+
+Otvorena pitanja za model (odlučuje se u koraku 9): dimenzije `null` dok nisu unete; `kind: 'pane'` umesto `'sash'` (fiksno staklo nije krilo).
+
+Svesno odloženo posle Demo 2: prepoznavanje cifara ($P sa šablonima kao baseline, zatim CNN/ONNX za poređenje u radu), Web Worker (prepoznavanje traje par ms; kasnije se menja samo mesto poziva), $P za simbole (poređenje sa geometrijskim pravilom).
 
 ## Napomene za rad sa Claude-om
 

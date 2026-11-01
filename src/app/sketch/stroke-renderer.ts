@@ -171,7 +171,12 @@ function drawDividerWith(
   }
 }
 
-export function drawCell(ctx: CanvasRenderingContext2D, bounds: BoundingBox, index: number): void {
+export function drawCell(
+  ctx: CanvasRenderingContext2D,
+  bounds: BoundingBox,
+  index: number,
+  label: string,
+): void {
   ctx.save();
   ctx.fillStyle = CELL_COLORS[index % CELL_COLORS.length];
   ctx.fillRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
@@ -179,7 +184,7 @@ export function drawCell(ctx: CanvasRenderingContext2D, bounds: BoundingBox, ind
   ctx.font = CELL_LABEL_FONT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(String(index + 1), (bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2);
+  ctx.fillText(label, (bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2);
   ctx.restore();
 }
 

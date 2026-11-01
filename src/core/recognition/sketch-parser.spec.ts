@@ -49,6 +49,8 @@ describe('parseSketch', () => {
       axisLines: [],
       grid: null,
       tree: null,
+      cells: [],
+      outside: [],
     });
   });
 
@@ -93,5 +95,34 @@ describe('parseSketch', () => {
     expect(grid?.dividers).toEqual([]);
     expect(grid?.rejected).toHaveLength(1);
     expect(tree?.kind).toBe('cell');
+  });
+
+  it('recognizes the opening of every cell', () => {
+    const tilt = polyline(5, [
+      { x: 360, y: 330 },
+      { x: 400, y: 170 },
+      { x: 440, y: 330 },
+    ]);
+    const turnHandleLeft = polyline(6, [
+      { x: 450, y: 200 },
+      { x: 350, y: 240 },
+      { x: 450, y: 280 },
+    ]);
+    const { cells } = parseSketch([frame, divider, chevron, tilt, turnHandleLeft]);
+
+    expect(cells.map((c) => c.opening)).toEqual([
+      { kind: 'recognized', opening: 'turn', hinge: 'left' },
+      { kind: 'recognized', opening: 'tilt_turn', hinge: 'right' },
+    ]);
+  });
+
+  it('puts strokes outside the frame aside, with their side', () => {
+    const digit = polyline(7, [
+      { x: 280, y: 430 },
+      { x: 300, y: 480 },
+    ]);
+    const { outside } = parseSketch([frame, digit]);
+
+    expect(outside).toMatchObject([{ side: 'below', stroke: { stroke: digit } }]);
   });
 });

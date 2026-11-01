@@ -259,7 +259,7 @@ export class SketchCanvas {
       }
     }
     if (structure && this.showCells()) {
-      structure.cells.forEach((bounds, index) => drawCell(ctx, bounds, index));
+      structure.cells.forEach((cell, index) => drawCell(ctx, cell.bounds, index, cell.label));
     }
     if (structure?.grid && this.showGrid()) {
       drawFrame(ctx, structure.grid.frame);

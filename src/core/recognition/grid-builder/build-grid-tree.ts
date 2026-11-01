@@ -13,6 +13,8 @@ export type GridNode =
       readonly children: readonly GridNode[];
     };
 
+export type GridCell = Extract<GridNode, { kind: 'cell' }>;
+
 function crossesRegion(line: AxisLine, bounds: BoundingBox): boolean {
   let insideAcross: boolean;
   let coversAlong: boolean;
@@ -93,4 +95,8 @@ function build(bounds: BoundingBox, dividers: readonly AxisLine[]): GridNode {
 
 export function buildGridTree(grid: GridLines): GridNode {
   return build(grid.frame, grid.dividers);
+}
+
+export function gridCells(tree: GridNode): GridCell[] {
+  return tree.kind === 'cell' ? [tree] : tree.children.flatMap(gridCells);
 }

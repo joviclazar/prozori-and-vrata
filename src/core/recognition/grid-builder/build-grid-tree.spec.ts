@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoundingBox } from '../../geometry/bounding-box';
 import { Orientation } from '../../geometry/segment';
 import { AxisLine } from './axis-lines';
-import { buildGridTree, GridNode } from './build-grid-tree';
+import { buildGridTree, gridCells, GridNode } from './build-grid-tree';
 import { GridLines } from './find-grid-lines';
 
 function axis(
@@ -202,5 +202,26 @@ describe('buildGridTree', () => {
     buildGridTree(input);
 
     expect(input).toEqual(copy);
+  });
+});
+
+describe('gridCells', () => {
+  it('returns the tree itself when it is a single cell', () => {
+    const tree = buildGridTree(grid([]));
+    expect(gridCells(tree)).toEqual([tree]);
+  });
+
+  it('returns the cells left to right and top to bottom, as the original node objects', () => {
+    const transom = axis('horizontal', 200, 100, 500, true);
+    const belowTransom = axis('vertical', 300, 200, 400);
+    const tree = buildGridTree(grid([belowTransom, transom]));
+    const cells = gridCells(tree);
+
+    expect(cells.map((c) => c.bounds)).toEqual([
+      box(100, 500, 100, 200),
+      box(100, 300, 200, 400),
+      box(300, 500, 200, 400),
+    ]);
+    expect(tree.kind === 'split' && cells[0]).toBe(tree.kind === 'split' && tree.children[0]);
   });
 });

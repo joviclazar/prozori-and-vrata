@@ -1,6 +1,6 @@
 import { Stroke } from '../model/stroke';
 import { AxisLine, mergeCollinear, toAxisLine } from './grid-builder/axis-lines';
-import { buildGridTree, GridNode } from './grid-builder/build-grid-tree';
+import { buildGridTree, GridCell, GridNode } from './grid-builder/build-grid-tree';
 import { findGridLines, GridLines } from './grid-builder/find-grid-lines';
 import {
   GRID_THRESHOLDS,
@@ -8,6 +8,7 @@ import {
   MERGE_THRESHOLDS,
   MergeThresholds,
 } from './grid-builder/grid-builder-config';
+import { OutsideAnnotation, placeAnnotations } from './grid-builder/place-annotations';
 import { SegmentedStroke, segmentStrokes } from './segmentation/segment-strokes';
 import {
   MIN_STROKE_LENGTH_PX,
@@ -21,6 +22,9 @@ import {
   STRUCTURAL_LINE_THRESHOLDS,
   StructuralLineThresholds,
 } from './stroke-classifier/structural-lines-config';
+import { Chevron, findChevrons } from './symbol-recognizer/find-chevrons';
+import { OpeningResult, recognizeOpening } from './symbol-recognizer/recognize-opening';
+import { SYMBOL_THRESHOLDS, SymbolThresholds } from './symbol-recognizer/symbol-config';
 
 export interface SketchParserConfig {
   readonly segmentationTolerancePx: number;
@@ -28,6 +32,7 @@ export interface SketchParserConfig {
   readonly structuralLines: StructuralLineThresholds;
   readonly merge: MergeThresholds;
   readonly grid: GridThresholds;
+  readonly symbols: SymbolThresholds;
 }
 
 export const DEFAULT_SKETCH_PARSER_CONFIG: SketchParserConfig = {
@@ -36,7 +41,15 @@ export const DEFAULT_SKETCH_PARSER_CONFIG: SketchParserConfig = {
   structuralLines: STRUCTURAL_LINE_THRESHOLDS,
   merge: MERGE_THRESHOLDS,
   grid: GRID_THRESHOLDS,
+  symbols: SYMBOL_THRESHOLDS,
 };
+
+export interface ParsedCell {
+  readonly cell: GridCell;
+  readonly strokes: readonly SegmentedStroke[];
+  readonly chevrons: readonly Chevron[];
+  readonly opening: OpeningResult;
+}
 
 export interface ParsedSketch {
   readonly segmented: readonly SegmentedStroke[];
@@ -45,6 +58,8 @@ export interface ParsedSketch {
   readonly axisLines: readonly AxisLine[];
   readonly grid: GridLines | null;
   readonly tree: GridNode | null;
+  readonly cells: readonly ParsedCell[];
+  readonly outside: readonly OutsideAnnotation[];
 }
 
 export function parseSketch(
@@ -61,5 +76,17 @@ export function parseSketch(
   const grid = findGridLines(axisLines, config.grid);
   const tree = grid === null ? null : buildGridTree(grid);
 
-  return { segmented, lines, annotations, axisLines, grid, tree };
+  if (grid === null || tree === null) {
+    return { segmented, lines, annotations, axisLines, grid, tree, cells: [], outside: [] };
+  }
+
+  const annotated = new Set<Stroke>(annotations);
+  const segmentedAnnotations = segmented.filter((s) => annotated.has(s.stroke));
+  const placed = placeAnnotations(tree, grid.frame, segmentedAnnotations);
+  const cells = placed.cells.map(({ cell, strokes }) => {
+    const chevrons = findChevrons(strokes, config.symbols);
+    return { cell, strokes, chevrons, opening: recognizeOpening(chevrons) };
+  });
+
+  return { segmented, lines, annotations, axisLines, grid, tree, cells, outside: placed.outside };
 }
